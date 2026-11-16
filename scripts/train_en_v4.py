@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
 import joblib
 
-OUT = r"D:\ai_train\ckpt\detector_en_v4"
+OUT = r"D:\ai_train\ckpt\detector_en_v5"
 os.makedirs(OUT, exist_ok=True)
 
 def clean_ai(t):
@@ -17,7 +17,7 @@ def clean_ai(t):
     return t.strip()
 
 ai=[]
-for fn in ["ai_en_npu.jsonl","ai_en_npu2.jsonl"]:
+for fn in ["ai_en_npu.jsonl","ai_en_npu2.jsonl","ai_en_more.jsonl"]:
     p=os.path.join(r"D:\ai_train\data",fn)
     if not os.path.exists(p): continue
     for line in open(p,encoding="utf-8"):
