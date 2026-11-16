@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIGC 检测 Demo</title>
+<style>
+  :root{--fg:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--border:#30363d;--card:#161b22;--bg:#0d1117}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",sans-serif;max-width:760px;margin:0 auto;padding:32px 20px;line-height:1.6}
+  h1{font-size:24px;margin:0 0 8px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+  textarea{width:100%;min-height:180px;background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:15px;font-family:inherit;resize:vertical}
+  textarea:focus{outline:none;border-color:var(--accent)}
+  .row{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  button{background:var(--accent);color:#0d1117;border:none;padding:10px 22px;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer}
+  button:hover{opacity:.9}
+  button.sec{background:var(--card);color:var(--fg);border:1px solid var(--border)}
+  .count{color:var(--muted);font-size:13px}
+  #result{margin-top:24px;display:none}
+  .bar-wrap{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:18px}
+  .bar{height:28px;background:#21262d;border-radius:6px;overflow:hidden;position:relative}
+  .fill{height:100%;transition:width .5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;font-size:13px;font-weight:600;color:#0d1117}
+  .high{background:#f85149}.mid{background:#d29922}.low{background:#3fb950}
+  .lbl{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px}
+  .badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:13px;font-weight:600;margin-top:12px}
+  .b-high{background:#f8514922;color:#f85149;border:1px solid #f85149}
+  .b-mid{background:#d2992222;color:#d29922;border:1px solid #d29922}
+  .b-low{background:#3fb95022;color:#3fb950;border:1px solid #3fb950}
+  .meta{color:var(--muted);font-size:13px;margin-top:12px}
+  .note{background:var(--card);border-left:3px solid var(--accent);padding:12px 16px;margin-top:20px;font-size:13px;color:var(--muted);border-radius:0 6px 6px 0}
+  #loading{display:none;color:var(--accent);font-size:14px;margin-top:14px}
+</style>
+</head>
+<body>
+<h1>AIGC 文本检测</h1>
+<div class="sub">本地模型演示 · 中文 F1 0.9933 · 长文本 99.9%</div>
+
+<textarea id="txt" placeholder="粘贴要检测的文本（建议 150 字以上以获得最佳准确率）..."></textarea>
+<div class="row">
+  <button onclick="detect()">检测</button>
+  <button class="sec" onclick="clearAll()">清空</button>
+  <button class="sec" onclick="demo()">填入示例</button>
+  <span class="count" id="cnt">0 字</span>
+</div>
+<div id="loading">⏳ 检测中...</div>
+
+<div id="result">
+  <div class="bar-wrap">
+    <div class="lbl"><span>AI 概率</span><span id="pct">0%</span></div>
+    <div class="bar"><div class="fill" id="fill" style="width:0%"></div></div>
+    <div id="badge" class="badge"></div>
+    <div class="meta" id="meta"></div>
+  </div>
+</div>
+
+<div class="note">
+  <b>说明</b>：本页面调用本地检测模型（需先运行 API 服务）。<br>
+  AI 概率高(≥70%)大概率是 AI 生成；低(&lt;30%)大概率人类；中间值存疑。<br>
+  <b>检测 150 字以上文本，准确率 99%+</b>。短句仅供参考。
+</div>
+
+<script>
+const ta = document.getElementById('txt');
+ta.addEventListener('input', () => {
+  document.getElementById('cnt').textContent = ta.value.length + ' 字';
+});
+
+function clearAll(){
+  ta.value=''; document.getElementById('cnt').textContent='0 字';
+  document.getElementById('result').style.display='none';
+}
+
+function demo(){
+  ta.value = "量子计算是一种基于量子力学原理的计算方法。它利用量子比特的叠加和纠缠特性进行并行计算，理论上能在特定问题上实现指数级加速。目前该技术仍处于早期阶段，面临退相干和纠错等挑战，距离大规模实用化还有相当距离。业界普遍认为，未来十年将是量子计算从实验室走向应用的关键窗口期。";
+  ta.dispatchEvent(new Event('input'));
+}
+
+async function detect(){
+  const text = ta.value.trim();
+  if(!text){ alert('请先输入文本'); return; }
+  document.getElementById('loading').style.display='block';
+  document.getElementById('result').style.display='none';
+
+  try{
+    // 调用本地API (需启动 serve.py)
+    const resp = await fetch('http://127.0.0.1:8000/detect', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text})
+    });
+    if(!resp.ok) throw new Error('API 未启动');
+    const data = await resp.json();
+    show(data.ai_probability, data.language, data.confidence);
+  }catch(e){
+    // 无API时给出提示
+    document.getElementById('loading').style.display='none';
+    alert('需要先启动本地服务：\n\npython src/serve.py\n\n然后在浏览器打开本页面。');
+  }
+}
+
+function show(p, lang, conf){
+  document.getElementById('loading').style.display='none';
+  const r = document.getElementById('result');
+  r.style.display='block';
+  const pct = (p*100).toFixed(1);
+  document.getElementById('pct').textContent = pct + '%';
+  const fill = document.getElementById('fill');
+  fill.style.width = pct + '%';
+  fill.textContent = pct >= 25 ? pct + '%' : '';
+  let cls, label;
+  if(p >= 0.7){ cls='high'; label='高 — 大概率是 AI 生成'; }
+  else if(p >= 0.3){ cls='mid'; label='中 — 存疑，可能人机混合'; }
+  else { cls='low'; label='低 — 大概率是人类写的'; }
+  fill.className = 'fill ' + cls;
+  const badge = document.getElementById('badge');
+  badge.className = 'badge b-' + (cls==='high'?'high':cls==='mid'?'mid':'low');
+  badge.textContent = label;
+  document.getElementById('meta').textContent =
+    `语言: ${lang} | 置信度: ${conf||'—'} | 长度: ${ta.value.length} 字`;
+}
+</script>
+</body>
+</html>

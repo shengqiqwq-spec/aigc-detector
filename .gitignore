@@ -1,0 +1,28 @@
+# 环境
+venv/
+ov_env/
+__pycache__/
+*.pyc
+*.pyo
+
+# 数据(太大,不传)
+data/*.jsonl
+data/*.txt
+_archive/
+
+# 模型权重(用Git LFS或单独发布)
+models/*.gguf
+ckpt/**/*.bin
+ckpt/**/*.safetensors
+ckpt/*.model
+ckpt/*.npy
+
+# 临时
+*.log
+_temp*
+memguard.log
+npu_run.log
+
+# 系统
+.DS_Store
+Thumbs.db

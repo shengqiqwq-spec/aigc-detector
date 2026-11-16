@@ -1,0 +1,19 @@
+# 核心检测(纯CPU, 无需GPU/NPU)
+scikit-learn>=1.3
+scipy>=1.10
+numpy>=1.24
+joblib>=1.3
+psutil>=5.9
+
+# Tier-3 CNN (可选, 极速推理)
+# torch>=2.0
+
+# 降AI - LLM改写 (可选, 需本地llama.cpp + GGUF模型)
+# 无额外Python依赖, 用urllib调HTTP API
+
+# 降AI - 规则/程序化 (无依赖)
+# humanize2.py / evasion_engine.py 纯标准库
+
+# 可选: GPU/NPU加速 (Intel)
+# openvino>=2024.0
+# openvino-genai>=2024.0

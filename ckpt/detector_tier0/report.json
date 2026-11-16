@@ -1,0 +1,10 @@
+{
+  "f1": 0.8853,
+  "auroc": 0.962,
+  "acc": 0.8892,
+  "model": "Hashing+MultinomialNB",
+  "clf_size_kb": 2048.8,
+  "features": 65536,
+  "train_n": 48000,
+  "val_n": 12000
+}
