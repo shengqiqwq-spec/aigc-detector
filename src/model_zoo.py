@@ -151,7 +151,7 @@ def pred_tier2_light(text):
 
 def pred_en(text):
     """英文检测器v4: 491条当代Qwen生成数据训练, 泛化良好"""
-    d = os.path.join(BASE, "detector_en_v4")
+    d = os.path.join(BASE, "detector_en_v5")
     vec = _load_joblib(d, "tfidf.joblib")
     clf = _load_joblib(d, "clf.joblib")
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
