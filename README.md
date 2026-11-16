@@ -7,7 +7,7 @@ A lightweight, fully-local toolkit for **AIGC text detection** and **AI-content 
 ## 亮点
 
 - **多档位模型矩阵**：2MB 手机版 → 12MB 通用版，按硬件自动选择
-- **中文检测 F1 = 0.9901**（独立测试集 27562 条，长文本 99.95%）
+- **中文检测 F1 = 0.9934**（独立测试集 27562 条，长文本 100%）
 - **纯本地运行**：无需联网、无 API 费用、不上传任何数据
 - **零幻觉降AI**：程序化 n-gram 审计方案，不改事实/数字
 - **多硬件加速**：支持 CPU / Intel Arc GPU (Vulkan) / Intel NPU (OpenVINO)
@@ -35,8 +35,8 @@ python src/model_zoo.py --info
 
 | 档位 | 模型 | 体积 | 整体F1 | 短文本 | 长文本 | 适用 |
 |---|---|---|---|---|---|---|
-| **zh_deep** ⭐ | TF-IDF+LR | 12MB | **0.9901** | 0.9882 | 0.9995 | 全机型（默认） |
-| cnn_full | CharTextCNN | 3.3MB | 训练中 | — | — | 极速 |
+| **zh_final** ⭐ | TF-IDF+LR | 14MB | **0.9934** | 0.9921 | 1.0000 | 全机型（默认） |
+| cnn_full | CharTextCNN | 5.1MB | 0.9540 | — | — | 极速21ms |
 | tier0 | Hashing+NB | 2.1MB | 0.897 | 0.890 | 0.963 | 手机/嵌入式 |
 | en | TF-IDF(en) | 8MB | 0.982 | — | — | 英文 |
 
@@ -46,8 +46,8 @@ python src/model_zoo.py --info
 
 | 方案 | 效果 | 依赖 |
 |---|---|---|
-| `humanize_llm.py` | 53%（LLM 语义改写） | Qwen3-14B 本地 |
-| `humanize2.py` | 24%（规则替换） | 无 |
+| `humanize_pro.py` | **58.7%**（14B 自动迭代） | Qwen3-14B 本地 |
+| `humanize2.py` | 44%（规则替换） | 无 |
 | `evasion_engine.py` | 零幻觉 + n-gram 审计 | 无 |
 
 ## 文档
@@ -78,8 +78,8 @@ Apache 2.0。模型基于 [HC3](https://huggingface.co/datasets/Hello-SimpleAI/H
 
 A fully-local AIGC text detection + humanization toolkit.
 
-- **Chinese detection F1 = 0.9901** (independent test, 27,562 samples; 99.95% on long text)
-- **Multi-tier models**: 2MB (mobile) → 12MB (universal), auto-selected by hardware
+- **Chinese detection F1 = 0.9934** (independent test, 27,562 samples; 100% on long text)
+- **Multi-tier models**: 2MB (mobile) → 14MB (universal), auto-selected by hardware
 - **100% local**: no network, no API cost, no data upload
 - **Multi-accelerator**: CPU / Intel Arc GPU (Vulkan) / Intel NPU (OpenVINO)
 
