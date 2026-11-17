@@ -32,9 +32,17 @@ python src/model_zoo.py --info
 
 ### 网页版 Demo
 
+两种界面任选：
+
 ```bash
+# 方式1: Gradio（功能全，推荐）
+pip install -r requirements-ui.txt
+python src/app_gradio.py
+# 打开 http://127.0.0.1:7860
+
+# 方式2: 轻量网页（零依赖）
 python src/serve.py
-# 浏览器打开 http://127.0.0.1:8000/
+# 打开 http://127.0.0.1:8000
 ```
 
 Windows 用户可直接双击 `启动Demo.bat`。

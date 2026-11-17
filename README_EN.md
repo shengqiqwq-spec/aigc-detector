@@ -32,9 +32,17 @@ python src/model_zoo.py --info
 
 ### Web Demo
 
+Two options:
+
 ```bash
+# Option 1: Gradio (full-featured, recommended)
+pip install -r requirements-ui.txt
+python src/app_gradio.py
+# open http://127.0.0.1:7860
+
+# Option 2: lightweight (zero extra deps)
 python src/serve.py
-# open http://127.0.0.1:8000/ in your browser
+# open http://127.0.0.1:8000
 ```
 
 Windows users can double-click `启动Demo.bat`.
