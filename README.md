@@ -1,91 +1,186 @@
-# AI Text Detector & Humanizer
+# AI 文本检测器 & 降 AI 工具
 
-A lightweight, fully-local toolkit for **AIGC text detection** and **AI-content humanization**, with a model matrix that scales from phones to desktops.
+**中文** | [English](README_EN.md)
 
-中文 | [English](#english)
-
-## 亮点
-
-- **多档位模型矩阵**：2MB 手机版 → 12MB 通用版，按硬件自动选择
-- **中文检测 F1 = 0.9934**（独立测试集 27562 条，长文本 100%）
-- **纯本地运行**：无需联网、无 API 费用、不上传任何数据
-- **零幻觉降AI**：程序化 n-gram 审计方案，不改事实/数字
-- **多硬件加速**：支持 CPU / Intel Arc GPU (Vulkan) / Intel NPU (OpenVINO)
-
-## 快速开始
-
-```bash
-pip install -r requirements.txt
-
-# 检测文本（自动判断语言 + 自动选档）
-python src/model_zoo.py "待检测的文本"
-
-# 查看机型与推荐档位
-python src/model_zoo.py --info
-```
-
-
-## 在线 Demo（本地）
-
-
-
-或者双击 `启动Demo.bat`（Windows）。
-
-## 模型矩阵
-
-| 档位 | 模型 | 体积 | 整体F1 | 短文本 | 长文本 | 适用 |
-|---|---|---|---|---|---|---|
-| **zh_final** ⭐ | TF-IDF+LR | 14MB | **0.9934** | 0.9921 | 1.0000 | 全机型（默认） |
-| cnn_full | CharTextCNN | 5.1MB | 0.9540 | — | — | 极速21ms |
-| tier0 | Hashing+NB | 2.1MB | 0.897 | 0.890 | 0.963 | 手机/嵌入式 |
-| en | TF-IDF(en) | 8MB | 0.982 | — | — | 英文 |
-
-*独立测试集 27562 条，基于 HC3 中文句子级增强数据
-
-## 降 AI 率
-
-| 方案 | 效果 | 依赖 |
-|---|---|---|
-| `humanize_pro.py` | **58.7%**（14B 自动迭代） | Qwen3-14B 本地 |
-| `humanize2.py` | 44%（规则替换） | 无 |
-| `evasion_engine.py` | 零幻觉 + n-gram 审计 | 无 |
-
-## 文档
-
-- [使用指南](docs/使用指南.md) — 什么场景准、怎么读结果
-- [模型卡](docs/MODEL_CARD.md) — 训练数据、指标、限制
-- [运行报告](docs/运行报告.md) — 一晚训练纪实
-
-## 已知限制
-
-1. **短文本弱于长文本**：<50 字信息不足，检测必然有歧义
-2. **英文存在领域漂移**：HC3 英文为 2022 年 GPT-3.5 风格
-3. **不等同 Turnitin**：独立指标，非商业检测器复刻
-4. **猫鼠博弈**：生成模型进化后检测器需重训
-
-## 伦理与免责
-
-本工具仅供**研究与教育**用途。不得用于学术不端行为。检测结果不能作为认定学术不端的唯一证据。
-
-## 许可
-
-Apache 2.0。模型基于 [HC3](https://huggingface.co/datasets/Hello-SimpleAI/HC3) (CC BY-SA 4.0) 训练。
+一套**完全本地运行**的 AIGC 文本检测 + 降 AI 化工具，模型矩阵从手机到桌面全覆盖。
 
 ---
 
-<a name="english"></a>
-## English
+## ✨ 核心亮点
 
-A fully-local AIGC text detection + humanization toolkit.
+- **4 个模型档位**：2MB 手机版 → 14MB 通用版，按硬件自动选择
+- **中文检测 F1 = 0.9933**（独立测试集 27,562 条，长文本 99.95%）
+- **中英双语**：自动识别语言，自动切换模型
+- **纯本地运行**：无需联网、无 API 费用、数据不外传
+- **零幻觉降AI**：程序化 n-gram 审计方案，不改事实/数字
+- **多硬件加速**：支持 CPU / Intel Arc GPU (Vulkan) / Intel NPU (OpenVINO)
 
-- **Chinese detection F1 = 0.9934** (independent test, 27,562 samples; 100% on long text)
-- **Multi-tier models**: 2MB (mobile) → 14MB (universal), auto-selected by hardware
-- **100% local**: no network, no API cost, no data upload
-- **Multi-accelerator**: CPU / Intel Arc GPU (Vulkan) / Intel NPU (OpenVINO)
+---
+
+## 🚀 快速开始
 
 ```bash
-python src/model_zoo.py "your text here"      # detect
-python src/model_zoo.py --info                 # show hardware profile
+# 1. 安装依赖（只需 scikit-learn 等基础包）
+pip install -r requirements.txt
+
+# 2. 检测文本（自动判断语言 + 自动选档）
+python src/model_zoo.py "待检测的文本"
+
+# 3. 查看你的机器适合哪档
+python src/model_zoo.py --info
 ```
 
-For research and educational use only. Not a substitute for Turnitin.
+### 网页版 Demo
+
+```bash
+python src/serve.py
+# 浏览器打开 http://127.0.0.1:8000/
+```
+
+Windows 用户可直接双击 `启动Demo.bat`。
+
+---
+
+## 📊 模型矩阵
+
+**独立测试集评估**（27,562 条，随机种子 999，与训练集不同）：
+
+| 档位 | 模型 | 体积 | 整体 F1 | 短文本 | 长文本 | 适用 |
+|---|---|---|---|---|---|---|
+| **zh_final** ⭐ | TF-IDF+LR | 14MB | **0.9933** | 0.9920 | 0.9995 | 全机型（默认） |
+| en_v5 | TF-IDF+LR | 1.5MB | **0.9955** | — | — | 英文 |
+| cnn_full | CharTextCNN | 5.1MB | 0.9540 | — | — | 极速 21ms |
+| tier0 | Hashing+NB | 2.1MB | 0.8853 | 0.890 | 0.963 | 手机/嵌入式 |
+
+**说明**：中文检测器训练数据 = HC3 中文 18.4 万条 + Qwen 生成的当代 AI 文本 1,860 条。
+
+---
+
+## 🎯 准确率预期
+
+| 文本长度 | 准确率 | 建议 |
+|---|---|---|
+| 300 字以上 | 99.9% | ✅ 最可靠 |
+| 150-300 字 | 99.9% | ✅ 可靠 |
+| 80-150 字 | 99.5% | ✔ 较可靠 |
+| 50-80 字 | ~98% | ⚠ 中等 |
+| **50 字以下** | ~96% | ⚠ 仅供参考 |
+
+**核心建议：检测 150 字以上文本，准确率 99%+。**
+
+---
+
+## 🔍 怎么看结果
+
+```json
+{"language": "zh", "ai_probability": 0.988, "bucket": "高", "confidence": "高(长文本~99.6%)"}
+```
+
+- `ai_probability`：0~1 的 AI 概率
+- `bucket`：高(≥0.7) / 中(0.3-0.7) / 低(<0.3)
+- `confidence`：根据文本长度给出的置信度提示
+
+**不要当判决书**——这是概率，不是证据。
+
+---
+
+## 🛠 降 AI 功能
+
+| 方案 | 降幅 | 依赖 | 特点 |
+|---|---|---|---|
+| **humanize_pro.py** ⭐ | **58.7%** | Qwen3-14B 本地 | 自动迭代，质量最好 |
+| humanize2.py | 44% | 无 | 规则改写，零依赖 |
+| evasion_engine.py | 词典内 96% | 无 | 零幻觉，保事实 |
+
+```bash
+# 规则改写（无需模型）
+python src/humanize2.py "你的文本"
+
+# 程序化引擎（零幻觉，保事实）
+python src/evasion_engine.py "你的文本"
+
+# LLM 改写（需先部署 llama.cpp + Qwen3-14B）
+python src/humanize_pro.py "你的文本" --target 0.3
+```
+
+---
+
+## 📁 项目结构
+
+```
+aigc-detector/
+├── README.md            中文说明（本文件）
+├── README_EN.md         English docs
+├── LICENSE              Apache 2.0
+├── demo.html            网页演示
+├── requirements.txt
+├── src/
+│   ├── model_zoo.py     检测入口（自动选档、可移植）
+│   ├── serve.py         本地 HTTP API
+│   ├── lang_router.py   语言判断
+│   ├── humanize_pro.py  14B 降AI
+│   ├── humanize2.py     规则降AI
+│   ├── evasion_engine.py 程序化降AI
+│   └── style_features.py
+├── scripts/             训练脚本（可复现）
+├── ckpt/                模型权重（22MB）
+└── docs/
+    ├── 使用指南.md
+    ├── MODEL_CARD.md
+    └── 运行报告_终版.md
+```
+
+---
+
+## ⚠️ 已知限制
+
+1. **短文本弱于长文本**：<50 字信息不足，检测必然有歧义（信息论天花板）
+2. **识别的是"模型指纹"**：检测真实 Qwen/GPT 输出很准（86-100%），但人类刻意模仿 AI 可能漏判
+3. **换新模型需重训**：AI 模型持续进化，检测器需重新生成数据训练
+4. **不等同 Turnitin**：独立指标，无法对齐任何商业检测器的精确百分比
+5. **英文短文本偏保守**：会落在"中"档而非"高"
+
+---
+
+## 🧪 实测数据
+
+| 测试 | 结果 |
+|---|---|
+| 真实 Qwen AI 文本（75 条） | **100% 判高**，平均 0.985 |
+| 人类文本（50 条） | **0% 误判**，平均 0.019 |
+| 分领域（7 领域 420 条） | 全领域 100% |
+| 长文本（>200 字） | **F1 = 0.9995** |
+
+---
+
+## 🤝 技术说明
+
+### 为什么用 TF-IDF 而不是 Transformer？
+
+在 CPU 上实测：roberta-base 单步训练 33 秒（80 步需 44 分钟），完全不可行。
+改用字符级 TF-IDF + 逻辑回归：**68 秒训完，F1 反而更高**（0.9933）。
+
+### 为什么混入 Qwen 生成的数据？
+
+HC3 数据集是 2022 年 GPT-3.5 风格，对当代模型输出识别率极低（英文仅 0.05）。
+用本地 Qwen 生成 1,860 条当代中文 + 888 条英文 AI 文本混合训练后：
+- 中文当代 AI 检测率：96.7%
+- 英文从 0.05 修复到 **0.9955**
+
+---
+
+## 📜 许可
+
+Apache 2.0。模型基于 [HC3](https://huggingface.co/datasets/Hello-SimpleAI/HC3)（CC BY-SA 4.0）训练。
+
+---
+
+## ⚖️ 伦理与免责
+
+本工具仅供**研究与教育**用途。不得用于学术不端行为。
+
+检测结果不能作为认定学术不端的唯一证据——误判率虽低但不是 0。
+
+---
+
+*最后更新：2026-11-17*
