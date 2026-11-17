@@ -1,0 +1,6 @@
+# 开发/测试依赖
+-r requirements.txt
+pytest>=7.0
+
+# Tier-3 CNN 测试需要 torch（可选）
+# 若无 torch，CNN 相关测试会自动跳过

@@ -118,17 +118,42 @@ aigc-detector/
 │   ├── model_zoo.py     检测入口（自动选档、可移植）
 │   ├── serve.py         本地 HTTP API
 │   ├── lang_router.py   语言判断
-│   ├── humanize_pro.py  14B 降AI
+│   ├── humanize_pro.py  14B 降AI（主力）
 │   ├── humanize2.py     规则降AI
 │   ├── evasion_engine.py 程序化降AI
 │   └── style_features.py
 ├── scripts/             训练脚本（可复现）
+├── tests/               pytest 测试（22 用例）
 ├── ckpt/                模型权重（22MB）
+├── .github/workflows/   CI 自动测试
 └── docs/
     ├── 使用指南.md
     ├── MODEL_CARD.md
     └── 运行报告_终版.md
 ```
+
+---
+
+## 🧪 运行测试
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests/ -v
+```
+
+CI 会在 Ubuntu / Windows 上自动跑全部测试（Python 3.9 & 3.11）。
+无 torch 环境下 CNN 相关测试自动跳过。
+
+---
+
+## 🤝 参与贡献
+
+欢迎提交 Issue 和 PR，详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+特别欢迎：
+- 新 AI 模型风格的训练数据（GPT-4 / 文心 / 豆包）
+- 新语言支持
+- 降AI 策略优化
 
 ---
 

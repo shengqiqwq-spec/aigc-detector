@@ -118,14 +118,39 @@ aigc-detector/
 │   ├── model_zoo.py     Detection entry (auto tier, portable)
 │   ├── serve.py         Local HTTP API
 │   ├── lang_router.py   Language detection
-│   ├── humanize_pro.py  14B humanizer
+│   ├── humanize_pro.py  14B humanizer (main)
 │   ├── humanize2.py     Rule-based humanizer
 │   ├── evasion_engine.py Programmatic humanizer
 │   └── style_features.py
 ├── scripts/             Training scripts (reproducible)
+├── tests/               pytest suite (22 cases)
 ├── ckpt/                Model weights (22MB)
+├── .github/workflows/   CI automation
 └── docs/                Guides, model card, run report
 ```
+
+---
+
+## 🧪 Testing
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests/ -v
+```
+
+CI runs on Ubuntu / Windows with Python 3.9 & 3.11.
+CNN tests auto-skip when torch is absent.
+
+---
+
+## 🤝 Contributing
+
+Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Especially welcome:
+- Training data from other model families (GPT-4 / Claude / Gemini)
+- New language support
+- Humanizer improvements
 
 ---
 
