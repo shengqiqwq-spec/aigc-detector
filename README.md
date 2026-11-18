@@ -37,7 +37,7 @@ python src/model_zoo.py --info
 ```bash
 # 方式1: Gradio（功能全，推荐）
 pip install -r requirements-ui.txt
-python app.py
+python src/app_gradio.py
 # 打开 http://127.0.0.1:7860
 
 # 方式2: 轻量网页（零依赖）
