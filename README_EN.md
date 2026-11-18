@@ -37,7 +37,7 @@ Two options:
 ```bash
 # Option 1: Gradio (full-featured, recommended)
 pip install -r requirements-ui.txt
-python src/app_gradio.py
+python app.py
 # open http://127.0.0.1:7860
 
 # Option 2: lightweight (zero extra deps)

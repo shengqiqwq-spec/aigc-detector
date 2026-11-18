@@ -26,3 +26,6 @@ npu_run.log
 # 系统
 .DS_Store
 Thumbs.db
+
+# Gradio
+gradio_cached_examples/
