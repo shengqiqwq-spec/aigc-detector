@@ -263,20 +263,24 @@ aigc-detector/
 ├── requirements.txt
 ├── src/
 │   ├── model_zoo.py     检测入口（自动选档、可移植）
-│   ├── serve.py         本地 HTTP API
+│   ├── fast_infer.py    纯 numpy 推理（TF-IDF+LR，冷启动 1.7s→0.3s）
+│   ├── fast_nb.py       纯 numpy 推理（Hashing+NB，冷启动 1.4s→0.15s）
+│   ├── serve.py         本地 HTTP API（/detect /info /health）
 │   ├── lang_router.py   语言判断
-│   ├── humanize_pro.py  14B 降AI（主力）
-│   ├── humanize2.py     规则降AI
-│   ├── evasion_engine.py 程序化降AI
+│   ├── humanize_pro.py  14B 降AI（语义级重写）
+│   ├── humanize2.py     规则降AI（零依赖）
+│   ├── evasion_engine.py 程序化降AI（零幻觉）
 │   └── style_features.py
-├── scripts/             训练脚本（可复现）
-├── tests/               pytest 测试（22 用例）
-├── ckpt/                模型权重（22MB）
+├── scripts/             训练与导出脚本（可复现）
+│   └── export_fast.py   把 sklearn 模型导出为 fast.npz
+├── tests/               pytest 测试（75 用例）
+├── ckpt/                模型权重（16MB）
 ├── .github/workflows/   CI 自动测试
 └── docs/
     ├── 使用指南.md
-    ├── MODEL_CARD.md
-    └── 运行报告_终版.md
+    ├── MODEL_CARD.md           模型卡（指标、局限、使用边界）
+    ├── 运行报告_2026-11-20.md   最近一次通宵调试
+    └── 运行报告_2026-11-17.md   首夜记录（历史归档）
 ```
 
 ---

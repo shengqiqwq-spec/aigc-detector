@@ -253,7 +253,11 @@ aigc-detector/
 ├── tests/               pytest suite (75 cases)
 ├── ckpt/                Model weights (16MB, npz fast paths included)
 ├── .github/workflows/   CI automation
-└── docs/                Guides, model card, run report
+└── docs/
+    ├── 使用指南.md          Usage guide (Chinese)
+    ├── MODEL_CARD.md       Metrics, limitations, use boundaries
+    ├── 运行报告_2026-11-20.md  Latest overnight session
+    └── 运行报告_2026-11-17.md  First session (historical)
 ```
 
 ---
