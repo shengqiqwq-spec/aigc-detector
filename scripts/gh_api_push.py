@@ -44,7 +44,16 @@ def push(repo_path, repo, base_sha, message):
         print(f"  ✓ {path}")
 
     # 3. tree
+    # API 只接受完整 40 位 SHA; 传入短 SHA 时先解析成完整 SHA
     full_base = api(f"repos/{repo}/commits/{base_sha}", jq=".sha").strip()
+    if len(full_base) != 40:
+        # jq 可能未生效, 退回解析整个 JSON
+        import json as _j
+        raw = api(f"repos/{repo}/commits/{base_sha}")
+        try: full_base = _j.loads(raw)["sha"]
+        except Exception: pass
+    if len(full_base) != 40:
+        print(f"❌ 无法解析 base commit: {base_sha}"); return
     tree = json.loads(api(f"repos/{repo}/git/trees", {"base_tree": full_base, "tree": items}))
     print(f"tree: {tree['sha'][:7]}")
 
