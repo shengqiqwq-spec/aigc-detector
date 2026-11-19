@@ -12,6 +12,26 @@ v3 修复以上四点, 套话表扩充到 40+ 条。
 """
 import sys, re, random
 
+# 正式文书特征词: 命中足够多就走"正式"模式, 不做口语化替换
+FORMAL_MARKERS = ("各部门", "各单位", "现将", "有关事项", "通知如下", "经研究决定",
+                  "特此通知", "请遵照执行", "贯彻落实", "高度重视", "认真组织",
+                  "切实做好", "进一步加强", "现将有关事项", "现予公布", "此致",
+                  "敬礼", "请示", "批复", "函", "纪要", "决议", "章程")
+
+
+def is_formal(text):
+    """判断是否为公文/正式文书
+
+    正式文书里"高度重视"改成"看重"、"认真组织"改成"好好安排",
+    读起来像小学生模仿公文 —— 语域崩塌比留着 AI 味更糟。
+    """
+    hits = sum(1 for m in FORMAL_MARKERS if m in text)
+    # 短文本里 3 个正式词就够判; 长文本按密度
+    if len(text) < 120:
+        return hits >= 3
+    return hits >= 4 or (hits >= 2 and "通知" in text)
+
+
 def is_english(text):
     """英文判定: ASCII 字母占字母总数的绝大多数"""
     letters = [c for c in text if c.isalpha()]
@@ -32,6 +52,11 @@ CONNECT = ["然后", "不过", "还有就是", "话说回来", "对了", "反正
 # 括号补充说明 (人类写作的强特征: 边写边补注)
 ZH_PAREN = ["（这点其实挺关键）", "（说实话有点麻烦）", "（我们试过）", "（效果一般）",
             "（具体还得看情况）", "（这个不好说）", "（大概是这样）"]
+# 正式文书的括注: 不能带口语腔, 否则公文变闲聊
+ZH_PAREN_FORMAL = ["（详见附件）", "（按现行规定执行）", "（具体以正式文件为准）",
+                   "（后续另行说明）", "（相关部门已确认）"]
+EN_PAREN_FORMAL = [" (see appendix)", " (per current policy)", " (details to follow)"]
+
 EN_PAREN = [" (which is honestly a pain)", " (we tried this)",
             " (not sure it always works)", " (ymmv)",
             " (still working on it)"]
@@ -156,10 +181,17 @@ def humanize_v2(text, strength=1.0, lang=None):
     """
     if lang is None:
         lang = "en" if is_english(text) else "zh"
+    formal = is_formal(text) if lang == "zh" else False
     if lang == "en":
         slogans, subjects, hedges, connects = EN_SLOGAN, EN_SUBJ, EN_HEDGE, EN_CONNECT
         parens = EN_PAREN
         puncts, sep = ".,;:", " "
+    elif formal:
+        # 公文模式: 不换套话(改了语域就崩), 不加油腔腔主语/衔接词,
+        # 只用正式括注做"信息补充", 这是唯一不破坏语域的手段。
+        slogans, subjects, hedges, connects = [], [], [], []
+        parens = ZH_PAREN_FORMAL
+        puncts, sep = "，、；：", "，"
     else:
         slogans, subjects, hedges, connects = ZH_SLOGAN, SUBJ_PREFIX, HEDGE, CONNECT
         parens = ZH_PAREN
@@ -185,13 +217,34 @@ def humanize_v2(text, strength=1.0, lang=None):
         max_inject = max(1, len(sents) // per) if strength <= 1 else max(1, int(len(sents) * (strength / 3)))
         new_sents = []
 
+        # 正式文书: 随机注入会让人有一大半时候"改完和原文一样",
+        # 用户会以为功能坏了。这里改成确定性: 首句必插一个正式括注。
+        # strength 控制插几个: 1.0 → 1 个, 2.0 → 2 个, 3.0 → 3 个(不超过句数)。
+        injected_forced = 0
+        if formal and sents:
+            n_target = max(1, min(len(sents), int(round(strength))))
+            order = sorted(range(len(sents)), key=lambda k: -len(sents[k]))
+            used = 0
+            for _i in order:
+                if used >= n_target:
+                    break
+                _s = sents[_i]
+                body = _s.rstrip("。！？；!?;.")
+                end = _s[len(body):] or "。"
+                if len(body) > 12:
+                    sents[_i] = body + random.choice(parens) + end
+                    used += 1
+            injected_forced = used
+        # 强制插过的要占用注入配额, 否则随机分支会再插一个 → 双括注
+        injected = injected_forced
+
         for i, s in enumerate(sents):
             # 1) 套话替换
             for pat, rep in slogans:
                 s = re.sub(pat, rep, s) if lang == "zh" else re.sub(pat, rep, s, flags=re.I)
 
             # 2) 注入口语标记, 每句最多一处 (叠加会变结巴, 必须互斥)
-            if strength >= 2 and len(s) > 40:
+            if strength >= 2 and len(s) > 40 and not formal:
                 # 长句拆短: 在中间逗号处断句(人类特征)
                 # 但不能切在刚替换出来的衔接短语上 —— 否则会得到
                 # "Sort of worth noting. We must..." 这种语义断裂
@@ -206,7 +259,9 @@ def humanize_v2(text, strength=1.0, lang=None):
                 if mids and random.random() < 0.35 * (strength - 1):
                     cut = mids[len(mids) // 2]
                     s = s[:cut] + ("。" if lang == "zh" else ". ") + s[cut + 1:].lstrip()
-            if strength > 0 and len(s) > 14 and injected < max_inject:
+            # 正式文书的注入已在上面确定性做过一次, 这里整体跳过 ——
+            # 否则 subjects/hedges/connects 是空列表, random.choice([]) 会崩。
+            if not formal and strength > 0 and len(s) > 14 and injected < max_inject:
                 roll = random.random()
                 # 括号补充: 实测降幅最大(0.804 -> 0.244), 优先
                 if roll < min(0.75, 0.35 * strength) and len(s) > 20:

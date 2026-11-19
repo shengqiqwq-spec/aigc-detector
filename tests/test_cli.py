@@ -283,6 +283,60 @@ class TestProfileWithoutPsutil:
         assert 1 <= p["cores"] <= real, f"核数 {p['cores']} 超出系统实际 {real}"
 
 
+class TestFormalRegister:
+    """公文改写不能毁语域
+
+    UI 实跑时发现: 公文被改成 "高度重视→看重"、"认真组织→好好安排"，
+    还插了 "（我们试过）" —— 读起来像小学生模仿公文。
+    语域崩塌比留着 AI 味更糟。
+    """
+
+    OFFICIAL = ("各部门：为提升全体员工的专业技能与综合素质，进一步推动公司"
+                "高质量发展，经研究决定开展年度员工培训计划。现将有关事项通知"
+                "如下：请各部门高度重视，认真组织实施，确保培训取得实效。")
+
+    def test_official_document_detected(self):
+        sys.path.insert(0, SRC)
+        import humanize2 as H
+        assert H.is_formal(self.OFFICIAL) is True
+
+    def test_casual_text_not_formal(self):
+        sys.path.insert(0, SRC)
+        import humanize2 as H
+        assert H.is_formal("人工智能技术正在深刻改变各行各业。") is False
+
+    def test_official_keeps_register(self):
+        """公文改写后不能出现口语词"""
+        sys.path.insert(0, SRC)
+        import humanize2 as H
+        out = H.humanize_v2(self.OFFICIAL)
+        for bad in ("看重", "好好", "我们试过", "说实话", "挺关键", "效果一般"):
+            assert bad not in out, f"公文里出现了口语词「{bad}」"
+
+    def test_official_actually_changes(self):
+        """必须真的改动, 不能原样返回(否则用户以为坏了)"""
+        sys.path.insert(0, SRC)
+        import humanize2 as H
+        for _ in range(5):
+            assert H.humanize_v2(self.OFFICIAL) != self.OFFICIAL
+
+    def test_official_single_paren(self):
+        """不能叠括号 —— 曾经出现（A）（B）连排"""
+        sys.path.insert(0, SRC)
+        import humanize2 as H
+        for _ in range(5):
+            out = H.humanize_v2(self.OFFICIAL)
+            assert out.count("（") <= 1, f"括注叠加: {out}"
+
+    def test_casual_still_gets_colloquial(self):
+        """非公文必须仍然口语化, 否则这个功能没意义"""
+        sys.path.insert(0, SRC)
+        import humanize2 as H
+        casual = "人工智能技术正在深刻改变各行各业。在医疗领域，AI辅助诊断能够提高效率。"
+        out = H.humanize_v2(casual)
+        assert out != casual
+
+
 class TestModelFiles:
     """仓库发布的模型文件必须完整且不含 pickle"""
 
