@@ -56,10 +56,10 @@ Windows users can double-click `启动Demo.bat`.
 | Tier | Model | Size | Overall F1 | Short | Long | Use Case |
 |---|---|---|---|---|---|---|
 | **zh_final** ⭐ | TF-IDF+LR | 2.6MB | **0.9805** | 0.9489 | 0.9910 | All machines (default) |
-| en_v5 | TF-IDF+LR dual | 12MB | **0.9905** | 0.9513 | 0.9894 | English |
+| en_v5 | TF-IDF+LR dual | 2.8MB | **0.9905** | 0.9513 | 0.9894 | English |
 | tier3 | CharTextCNN | 1.9MB | **0.9709** | — | — | Needs torch, 0.5ms |
-| tier0 | Hashing+NB | 4.2MB | **0.9144** | — | — | Mobile (Chinese) |
-| en_tier0 | Hashing+NB | 4.2MB | **0.9408** | — | — | Mobile (English) |
+| tier0 | Hashing+NB | 421KB | **0.9144** | — | — | Mobile (Chinese) |
+| en_tier0 | Hashing+NB | 357KB | **0.9408** | — | — | Mobile (English) |
 
 **Measured head to head** (30 real AI samples + 30 human samples, 100-500 chars):
 
