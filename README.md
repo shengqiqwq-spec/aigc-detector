@@ -306,9 +306,12 @@ taskkill /F /PID <PID>
 
 那是 Python 导入 sklearn 的开销（单这一项就 1.2 秒），不是模型慢。
 
-**已优化**：模型现在同时附带 `fast.npz`（纯数组格式），加载时不碰 sklearn，
-冷启动从 **1719 ms 降到 575 ms**。模型目录里有没有 `fast.npz` 都能用——
-有就走快路径，没有自动回退到 sklearn。
+**已优化**：模型以 `fast.npz`（纯数组格式）发布，加载时不碰 sklearn，
+冷启动从 **1719 ms 降到 575 ms**。
+
+**仓库里只发 npz，不发 sklearn 原件。** 四个档位加起来 8MB（带 pkl 是 36MB），
+clone 体积小 78%。想自己重训的用户生成 pkl 后跑 `scripts/export_fast.py`
+转成 npz 即可，也可以用 `_load_joblib` 的 sklearn 回退路径。
 
 自己写脚本时仍建议先预热一次：
 

@@ -282,10 +282,13 @@ and they are more accurate. Either `pip install torch`, or just use the default.
 
 That is Python importing sklearn (1.2 s of it on its own), not the model.
 
-**Now optimized**: each model ships a `fast.npz` (plain arrays) that loads
+**Now optimized**: each model ships as `fast.npz` (plain arrays) and loads
 without touching sklearn, cutting cold start from **1719 ms to 575 ms**.
-It works either way - with the npz you get the fast path, without it the
-code falls back to sklearn.
+
+**The repo ships npz only, not the sklearn originals.** All four tiers total
+8 MB instead of 36 MB - a 78% smaller clone. If you retrain a model and
+produce `.pkl` files, run `scripts/export_fast.py` to convert them; the
+sklearn fallback path is still there for anyone who wants it.
 
 Pre-warming is still worth it in your own scripts:
 

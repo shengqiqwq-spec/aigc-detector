@@ -29,3 +29,7 @@ Thumbs.db
 
 # Gradio
 gradio_cached_examples/
+
+# sklearn 原件不进仓库 —— fast.npz/fast_nb.npz 已完全覆盖其功能, 体积只有 1/4。
+# 需要重训后再导出的用户, 自己生成 pkl 并运行 scripts/export_fast.py。
+ckpt/*/*.pkl

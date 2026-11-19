@@ -342,18 +342,31 @@ class TestModelFiles:
                 issues.append(f"{os.path.basename(d)}: {sorted(dup)}")
         assert not issues, f"存在重复的 joblib/pkl 文件对 (应删 joblib): {issues}"
 
-    def test_shipped_tiers_have_pkl(self):
-        """交付档位必须有 pkl (加载器优先读 pkl, 保证读到的就是新模型)"""
+    def test_shipped_tiers_have_fast_model(self):
+        """交付档位必须带 npz 快路径
+
+        最初这条测试查的是"有没有 pkl"，因为加载器优先读 pkl、怕读到旧模型。
+        现在 pkl 已从仓库移除（fast.npz 功能完全覆盖且体积只有 1/4），
+        语义要反过来：每个档位必须有 npz，且不应该再携带冗余 pkl。
+        """
         import glob
         missing = []
+        redundant = []
         for d in glob.glob(os.path.join(M.BASE, "detector_*")):
             if not os.path.isdir(d):
                 continue
-            if d.endswith("detector_cnn_full"):
+            name = os.path.basename(d)
+            if name == "detector_cnn_full":
                 continue   # CNN 用 model.pt
-            if not glob.glob(os.path.join(d, "*.pkl")):
-                missing.append(os.path.basename(d))
-        assert not missing, f"以下档位缺少 pkl: {missing}"
+            has_npz = (glob.glob(os.path.join(d, "fast.npz"))
+                       or glob.glob(os.path.join(d, "fast_nb.npz")))
+            if not has_npz:
+                missing.append(name)
+            if glob.glob(os.path.join(d, "*.pkl")):
+                redundant.append(name)
+        assert not missing, f"以下档位缺少 fast.npz/fast_nb.npz: {missing}"
+        assert not redundant, (
+            f"以下档位仍携带 sklearn 原件(pkl)，应删除以缩小仓库: {redundant}")
 
     def test_all_tier_reports_exist(self):
         for d in ["detector_zh_final", "detector_en_v5", "detector_tier0"]:
@@ -672,6 +685,10 @@ class TestFastInferParity:
         d = os.path.join(M.BASE, "detector_zh_final")
         if not os.path.exists(os.path.join(d, "fast.npz")):
             pytest.skip("fast.npz 未导出")
+        # sklearn 原件随 fast.npz 一起发布时体积翻倍, 默认只发布 npz;
+        # 有原件就验 parity, 没有就跳过
+        if not os.path.exists(os.path.join(d, "tfidf.pkl")):
+            pytest.skip("sklearn 原件未随仓库发布（只发布 fast.npz）")
 
         vec = pickle.load(open(os.path.join(d, "tfidf.pkl"), "rb"))
         clf = pickle.load(open(os.path.join(d, "clf.pkl"), "rb"))
@@ -692,6 +709,8 @@ class TestFastInferParity:
         d = os.path.join(M.BASE, "detector_en_v5")
         if not os.path.exists(os.path.join(d, "fast.npz")):
             pytest.skip("英文 fast.npz 未导出")
+        if not os.path.exists(os.path.join(d, "v1.pkl")):
+            pytest.skip("sklearn 原件未随仓库发布（只发布 fast.npz）")
 
         v1 = pickle.load(open(os.path.join(d, "v1.pkl"), "rb"))
         v2 = pickle.load(open(os.path.join(d, "v2.pkl"), "rb"))
@@ -758,6 +777,8 @@ class TestFastNBParity:
         d = os.path.join(M.BASE, "detector_tier0")
         if not os.path.exists(os.path.join(d, "fast_nb.npz")):
             pytest.skip("fast_nb.npz 未导出")
+        if not os.path.exists(os.path.join(d, "vec.pkl")):
+            pytest.skip("sklearn 原件未随仓库发布（只发布 fast.npz）")
         vec = pickle.load(open(os.path.join(d, "vec.pkl"), "rb"))
         clf = pickle.load(open(os.path.join(d, "clf.pkl"), "rb"))
         fast = FastNB(d)
@@ -777,6 +798,8 @@ class TestFastNBParity:
         d = os.path.join(M.BASE, "detector_en_tier0")
         if not os.path.exists(os.path.join(d, "fast_nb.npz")):
             pytest.skip("fast_nb.npz 未导出")
+        if not os.path.exists(os.path.join(d, "vec.pkl")):
+            pytest.skip("sklearn 原件未随仓库发布（只发布 fast.npz）")
         vec = pickle.load(open(os.path.join(d, "vec.pkl"), "rb"))
         clf = pickle.load(open(os.path.join(d, "clf.pkl"), "rb"))
         fast = FastNB(d)
