@@ -506,5 +506,26 @@ class TestGenreGeneralization:
         assert r.get("ai_new", 0) >= 3200, f"当代AI数据只有 {r.get('ai_new')} 条, 文体数据可能未生效"
 
 
+class TestEnglishGenreGeneralization:
+    """英文文体盲区: 曾对 casual post 只识别 14%"""
+
+    # 训练覆盖过的文体措辞
+    EN_GENRES = {
+        "memo": "Subject: Quarterly Performance Review Schedule\n\nPlease be advised that the quarterly performance review cycle begins next Monday. All department heads should schedule individual meetings with their team members by the end of the month and submit summary reports to HR.",
+        "support": "Thank you for reaching out to us regarding your recent order. We sincerely apologize for the delay you have experienced. Our logistics team has been notified and will prioritize your shipment, and you can expect a tracking update within 24 hours.",
+        "minutes": "The team met on Tuesday to review the mobile release timeline. Key decisions: we will prioritize the mobile release over the analytics dashboard, allocate two engineers to performance work, and defer the reporting overhaul to next quarter.",
+        "how_to": "Step-by-Step Instructions for Setting Up Your Standing Desk:\n\n1. Choose an Ergonomic Height: Adjust the desk so your elbows rest at a 90-degree angle.\n2. Position Your Monitor: Place the top of the screen at eye level.\n3. Manage Cables: Route all cables through the integrated tray.",
+    }
+
+    def test_en_genres_mostly_detected(self):
+        hits = 0
+        for name, txt in self.EN_GENRES.items():
+            p = M._ALL_PREDICTORS["en"](txt)
+            if p > 0.5:
+                hits += 1
+        # 允许 1 条换措辞漏判
+        assert hits >= len(self.EN_GENRES) - 1, f"英文文体只识别了 {hits}/{len(self.EN_GENRES)}"
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
