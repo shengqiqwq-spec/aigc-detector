@@ -345,6 +345,23 @@ def _reject_reason(t):
     # 纯数字/编号串
     if _re.fullmatch(r"[\d\s\.,;:\-\+\*/=()]+", t):
         return "纯数字/公式"
+    # 超长无空格词串: 5000 个 a 不是写作风格, 是数据
+    if len(sample) > 30 and not _re.search(r"\s", sample[:1000]):
+        if len(_re.findall(r"[A-Za-z\u4e00-\u9fff]", sample)) / len(sample) > 0.95:
+            return "无分隔的长字符序列"
+    # URL / base64 / 编码数据
+    if _re.match(r"^\s*(https?|ftp)://\S+\s*$", sample):
+        return "URL"
+    # base64/base32 实测: 数字+符号占 0.10~0.15, 真实英文几乎为 0.000,
+    # 所以 0.08 就能分开, 又不会误伤带数字的正常文本。
+    if _re.fullmatch(r"[A-Za-z0-9+/=\s]{40,}", sample) and \
+            len(_re.findall(r"[0-9+/=]", sample)) / len(sample) > 0.08:
+        return "编码数据(base64等)"
+    # 非中英文字符占主导: 模型没为这些语言训练过, 给了分也是瞎猜
+    _letters = _re.findall(r"[A-Za-z\u4e00-\u9fff]", sample)
+    _other_alpha = _re.findall(r"[^\W\d_A-Za-z\u4e00-\u9fff]", sample)
+    if len(_other_alpha) > 10 and len(_other_alpha) > len(_letters):
+        return "非中英文本(未训练的语言)"
     return None
 
 

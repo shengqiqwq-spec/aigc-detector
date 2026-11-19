@@ -283,6 +283,48 @@ class TestProfileWithoutPsutil:
         assert 1 <= p["cores"] <= real, f"核数 {p['cores']} 超出系统实际 {real}"
 
 
+class TestNonProseRejection:
+    """给非自然语言打分是误导, 但也不能误伤正常文本
+
+    实测发现几个漏网: 5000 个 a 给了 0.317、base64 给了 0.322、URL 给了 0.402、
+    阿拉伯文给了 0.421 —— 这些分数看起来煞有介事, 实际毫无意义。
+    """
+
+    REJECT = [
+        ("超长无空格串", "a" * 5000),
+        ("base64", "aGVsbG8gd29ybGQgdGhpcyBpcyBhIHRlc3Q=" * 20),
+        ("URL", "https://example.com/very/long/path?with=params&and=more#fragment"),
+        ("阿拉伯文", "هذا نص عربي للاختبار وهو نص طويل بما يكفي للتحليل"),
+        ("日文", "日本語のテキストです。これはテスト用の文章です。"),
+        ("XML", '<?xml version="1.0"?><root><item>test</item></root>'),
+        ("纯数字", "1234567890" * 50),
+    ]
+
+    ACCEPT = [
+        ("正常中文", "人工智能技术正在深刻改变各行各业的方方面面。"),
+        ("正常英文", "Artificial intelligence is changing every industry in profound ways."),
+        ("带数字中文", "2024年第三季度营收达到 15.3 亿元，同比增长 8.7%。"),
+        ("带年份英文", "In 2024, revenue reached 15.3 billion, up 8.7% year over year."),
+        ("中英混排", "机器学习 machine learning 是 AI 的核心部分。"),
+        ("带URL中文", "详情访问 https://example.com 查看，内容挺全面。"),
+        ("带括号公式", "根据公式 f(x) = x^2 + 1，可以推导出结果。"),
+    ]
+
+    def test_non_prose_is_rejected(self):
+        sys.path.insert(0, SRC)
+        import model_zoo as M
+        for name, text in self.REJECT:
+            d = M.detect(text)
+            assert d.get("error"), f"{name} 没有被拒绝, 给了 {d['ai_probability']}"
+
+    def test_normal_text_is_accepted(self):
+        sys.path.insert(0, SRC)
+        import model_zoo as M
+        for name, text in self.ACCEPT:
+            d = M.detect(text)
+            assert not d.get("error"), f"{name} 被误拒: {d['error']}"
+
+
 class TestRepetitionGuardPrecision:
     """重复检测要分清「垃圾重复」和「复制粘贴失误」
 
