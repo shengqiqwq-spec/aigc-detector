@@ -94,8 +94,20 @@ class TestDetection:
         assert M.detect(text)["ai_probability"] > 0.5
 
     def test_english_routed_to_en_model(self):
+        """英文必须路由到英文档位
+
+        断言"英文系"而不是具体档位名: 低配机(如 CI runner, 无 psutil 时默认
+        4 核/8GB)会走 en_tier0, 高配机走 en —— 两者都是正确的英文路由。
+        绑死具体档位会让测试在别人的机器上莫名失败。
+        """
         r = M.detect("Artificial intelligence is transforming the world rapidly.")
         assert r["language"] == "en"
+        assert r["tier"].startswith("en"), f"英文文本路由到了非英文档位: {r['tier']}"
+
+    def test_explicit_tier_respected(self):
+        """显式指定档位时不该被自动路由覆盖"""
+        r = M.detect("Artificial intelligence is transforming the world rapidly.",
+                     tier="en")
         assert r["tier"] == "en"
 
 
