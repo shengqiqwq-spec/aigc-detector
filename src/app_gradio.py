@@ -48,20 +48,23 @@ def detect_fn(text):
 def humanize_fn(text, method):
     if not text or not text.strip():
         return "请输入文本"
-    if method == "规则改写（零依赖）":
+    # 用前缀匹配而不是全等: 下拉框文案带后缀(如"（零依赖，推荐）"),
+    # 全等比较曾导致三个选项全部失配、静默返回原文。
+    m = (method or "").strip()
+    if m.startswith("规则改写"):
         from humanize2 import humanize_v2
         return humanize_v2(text, strength=2.0)
-    elif method == "程序化引擎（零幻觉）":
+    if m.startswith("程序化"):
         from evasion_engine import humanize_programmatic
         out, _ = humanize_programmatic(text)
         return out
-    elif method == "LLM改写（需14B服务）":
+    if m.startswith("LLM"):
         try:
             from humanize_pro import rewrite
             return rewrite(text)
         except Exception as e:
             return f"LLM 服务未启动或出错：{e}\n\n请先运行 llama-server + Qwen3-14B。"
-    return text
+    raise ValueError(f"未知改写方式: {method!r}")
 
 
 with gr.Blocks(title="AIGC 检测器") as demo:
@@ -106,8 +109,8 @@ with gr.Blocks(title="AIGC 检测器") as demo:
 
         | 档位 | 语言 | F1 | 体积 | 说明 |
         |---|---|---|---|---|
-        | tier1 | 中文 | 0.9804 | 13MB | 默认 |
-        | en | 英文 | 0.9915 | 12MB | 英文默认 |
+        | tier1 | 中文 | 0.9802 | 13MB | 默认 |
+        | en | 英文 | 0.9905 | 12MB | 英文默认 |
         | tier3 | 中文 | 0.9709 | 1.9MB | 需 torch, 0.5ms |
         | tier0 | 中文 | 0.9144 | 4.2MB | 手机/嵌入式 |
         | en_tier0 | 英文 | 0.9408 | 4.2MB | 手机/嵌入式 |

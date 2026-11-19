@@ -588,5 +588,40 @@ class TestHumanizerOutputIntegrity:
             assert "big big" not in out.lower(), f"重复替换: {out}"
 
 
+class TestGradioDispatch:
+    """UI 下拉框文案与后端 dispatch 必须对齐 (曾全等比较导致选项静默失效)"""
+
+    def test_all_radio_choices_dispatch(self):
+        """每个 UI 选项都必须真的走到对应改写器, 不能静默返回原文"""
+        import re as _re
+        src_path = os.path.join(ROOT, "src", "app_gradio.py")
+        with open(src_path, encoding="utf-8") as f:
+            src = f.read()
+
+        # 抓出 Radio 的所有选项
+        m = _re.search(r"choices=\[([^\]]+)\]", src)
+        assert m, "未找到 Radio choices 定义"
+        choices = _re.findall(r'"([^"]+)"', m.group(1))
+        assert len(choices) >= 2, f"选项过少: {choices}"
+
+        # 每个选项前缀应能在 dispatch 里找到分支
+        prefixes = [c[:3] for c in choices]
+        for c, pre in zip(choices, prefixes):
+            if pre == "LLM":
+                continue          # 需要外部服务, 跳过
+            assert pre in src, f"选项「{c}」在 dispatch 中无对应分支"
+
+    def test_humanize_actually_changes_text(self):
+        """改写函数必须真的改变文本"""
+        import importlib
+        import app_gradio
+        importlib.reload(app_gradio)
+
+        src = "各部门：为提升全体员工的专业技能与综合素质，经研究决定开展年度员工培训计划。培训将围绕专业技能培训及企业文化宣贯等方面展开。"
+        for choice in ["规则改写（零依赖，推荐）", "程序化引擎（零幻觉）"]:
+            out = app_gradio.humanize_fn(src, choice)
+            assert out != src, f"「{choice}」静默返回原文, dispatch 失配"
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

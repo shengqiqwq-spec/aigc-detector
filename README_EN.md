@@ -307,7 +307,7 @@ so it learned general AI-writing features rather than one model's fingerprint.
 ### Why TF-IDF instead of Transformers?
 
 Measured on CPU: roberta-base takes 33 s per training step (44 min for 80 steps) — completely impractical.
-Switched to character-level TF-IDF + logistic regression: **trains in 68 s, with higher F1** (0.9804).
+Switched to character-level TF-IDF + logistic regression: **trains in 68 s, with higher F1** (0.9802).
 
 ### Why mix in Qwen-generated data?
 

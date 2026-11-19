@@ -72,11 +72,11 @@ python scripts/train_en_tier0.py  # 英文轻量档
 | 项目 | 中文 | 英文 |
 |---|---|---|
 | 基础语料 | HC3-Chinese 12,853 QA | HC3-English 21,432 QA |
-| 当代 AI 补充 | 2,941 条 | 1,294 条 |
+| 当代 AI 补充 | 3,217 条 | 1,695 条 |
 | 特征 | char(1,5) TF-IDF, 300k 维 | char_wb(2,5) 200k + word(1,2) 100k |
 | 模型 | LogisticRegression C=12 | LogisticRegression C=10 |
 | 切分 | **按原问题分组**（防泄漏） | 同左 |
-| 独立集 F1 | **0.9804** | **0.9915** |
+| 独立集 F1 | **0.9802** | **0.9905** |
 | 轻量档 tier0 F1 | 0.9144 (Hashing+NB, 4.2MB) | — |
 
 ⚠️ **模型文件格式**：脚本输出 `.joblib`，但线上加载器**优先读 `.pkl`**。
