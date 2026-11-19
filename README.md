@@ -388,7 +388,7 @@ taskkill /F /PID <PID>
 那是 Python 导入 sklearn 的开销（单这一项就 1.2 秒），不是模型慢。
 
 **已优化**：模型以 `fast.npz`（纯数组格式）发布，加载时不碰 sklearn，
-冷启动从 **1719 ms 降到 575 ms**。
+冷启动从 **1719 ms 降到 387 ms**（5 次实测中位）。
 
 **仓库里只发 npz，不发 sklearn 原件。** 四个档位加起来 8MB（带 pkl 是 36MB），
 clone 体积小 78%。想自己重训的用户生成 pkl 后跑 `scripts/export_fast.py`
@@ -411,14 +411,14 @@ python scripts/export_fast.py ckpt/detector_en_v5 --dual      # 双特征 TF-IDF
 python scripts/export_fast.py ckpt/detector_tier0 --nb        # Hashing+NB 轻量档
 ```
 
-四个档位都已覆盖，冷启动 1719 ms → 581 ms，热路径:
+四个档位都已覆盖。冷启动 1719 ms → **387 ms**，热路径（各 500 次实测中位）:
 
-| 档位 | 优化前 | 优化后 |
+| 档位 | sklearn 路径 | 纯 numpy 路径 |
 |---|---|---|
-| tier1 | 1.20 ms | **0.02 ms** |
-| en | 1.43 ms | **<0.01 ms** |
-| tier0 | 0.71 ms | **0.11 ms** |
-| en_tier0 | 0.71 ms | **0.08 ms** |
+| tier1 | 1.20 ms | **0.044 ms** |
+| en | 1.43 ms | **0.103 ms** |
+| tier0 | 0.71 ms | **0.272 ms** |
+| en_tier0 | 0.71 ms | **0.310 ms** |
 
 纯 numpy 推理与 sklearn 数值一致到 **1e-8**（有测试守门）。
 
@@ -443,13 +443,22 @@ python scripts/export_fast.py ckpt/detector_tier0 --nb        # Hashing+NB 轻�
 
 ### 能不能检测其他语言的文本？
 
-目前只支持中文和英文，按 CJK 字符占比自动路由。其他语言会落到中文模型，
-结果不可信。
+目前只支持中文和英文，按 CJK 字符占比自动路由。
+
+**其他语言会被明确拒绝**，返回 `error: "not_natural_language"`，
+不会给出一个煞有介事的假分数。实测阿拉伯文、日文都会走这条路径。
+
+（早期版本会把日文当成中文处理，因为汉字在 CJK 区间里。现在直接拒绝。）
 
 ### 模型能商用吗？
 
-代码 Apache 2.0。模型训练用了 [HC3](https://huggingface.co/datasets/Hello-SimpleAI/HC3)（CC BY-SA 4.0），
-商用前请自行确认该数据集的条款。
+代码 **Apache 2.0**，商用无限制。
+
+**模型权重是 CC BY-SA 4.0**——因为基于 HC3（CC BY-SA 4.0）训练，ShareAlike 条款
+延伸到衍生模型。商用可以，但分发改造后的权重时要保留署名和相同许可。
+
+不想受 ShareAlike 约束？用你自己的数据重训：
+`scripts/train_zh_v7.py` / `train_en_v8.py` 是完整流程。详见[许可](#-许可)。
 
 ---
 
