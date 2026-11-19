@@ -17,10 +17,17 @@ SCRIPT = os.path.join(SRC, "model_zoo.py")
 
 
 def _run(*args, timeout=300):
+    """跑 CLI 并强制按 UTF-8 解码 stdout/stderr
+
+    Windows 上 text=True 会用系统默认编码解码, 而 CLI 现在输出 UTF-8 —— 
+    解码失败时 stdout 会变成 None, 后续断言就报 NoneType 不可迭代。
+    """
     env = dict(os.environ)
     env["PYTHONPATH"] = SRC
+    env["PYTHONIOENCODING"] = "utf-8"
     return subprocess.run([sys.executable, SCRIPT, *args],
                           capture_output=True, text=True,
+                          encoding="utf-8", errors="replace",
                           timeout=timeout, env=env)
 
 
@@ -86,7 +93,8 @@ class TestConsoleEncoding:
         env["PYTHONIOENCODING"] = "cp1252"
         r = subprocess.run(
             [sys.executable, SCRIPT, "人工智能技术正在深刻改变各行各业。"],
-            capture_output=True, text=True, timeout=300, env=env,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=300, env=env,
         )
         assert r.returncode == 0, f"cp1252 下崩溃: {r.stderr[-400:]}"
         assert "ai_probability" in r.stdout
@@ -96,7 +104,8 @@ class TestConsoleEncoding:
         env["PYTHONPATH"] = SRC
         env["PYTHONIOENCODING"] = "cp1252"
         r = subprocess.run([sys.executable, SCRIPT, "--info"],
-                           capture_output=True, text=True, timeout=180, env=env)
+                           capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=180, env=env)
         assert r.returncode == 0, f"cp1252 下 --info 崩溃: {r.stderr[-400:]}"
 
 
