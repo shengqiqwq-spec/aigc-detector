@@ -379,5 +379,25 @@ class TestModelFiles:
         assert r.get("ai_new", 0) > 0, "tier0 未用当代数据重训"
 
 
+
+
+# ---------- HTTP 服务 ----------
+class TestServerConcurrency:
+    """服务必须是多线程的 (单线程 TCPServer 在并发时拒绝连接)"""
+
+    def test_server_uses_threading(self):
+        src = open(os.path.join(ROOT, "src", "serve.py"), encoding="utf-8").read()
+        assert "ThreadingMixIn" in src, "serve.py 未使用多线程服务器"
+        assert "request_queue_size" in src, "未加大请求队列"
+        assert "ThreadedServer(" in src, "未实例化多线程服务器"
+
+    def test_queue_size_reasonable(self):
+        import re
+        src = open(os.path.join(ROOT, "src", "serve.py"), encoding="utf-8").read()
+        m = re.search(r"request_queue_size\s*=\s*(\d+)", src)
+        assert m, "找不到 request_queue_size"
+        assert int(m.group(1)) >= 64, f"队列太小: {m.group(1)} (默认5, 并发会失败)"
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

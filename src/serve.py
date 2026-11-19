@@ -67,6 +67,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     PORT = 8000
+    # 多线程服务器: 单线程 TCPServer 在并发>队列时直接拒绝连接(实测50并发失败14个)
+    class ThreadedServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+        daemon_threads = True
+        allow_reuse_address = True
+        request_queue_size = 128      # 默认5太小, 并发一上来就拒绝
+
     socketserver.TCPServer.allow_reuse_address = True
     # 启动前预热, 让首个请求就是热的
     import time as _t
@@ -76,5 +82,5 @@ if __name__ == "__main__":
     print(f"检测服务启动: http://127.0.0.1:{PORT}")
     print(f"Demo页面:    http://127.0.0.1:{PORT}/")
     print("按 Ctrl+C 停止")
-    with socketserver.TCPServer(("127.0.0.1", PORT), Handler) as httpd:
+    with ThreadedServer(("127.0.0.1", PORT), Handler) as httpd:
         httpd.serve_forever()
