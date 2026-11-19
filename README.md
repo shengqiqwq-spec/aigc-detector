@@ -173,6 +173,85 @@ python src/humanize_pro.py "你的文本" --target 0.3
 
 ---
 
+## 🔌 HTTP API
+
+启动服务后有三个端点，全部 CORS 开放，可被浏览器直连。
+
+```bash
+python src/serve.py     # 默认 http://127.0.0.1:8000
+```
+
+### `POST /detect` — 检测文本
+
+```bash
+curl -X POST http://127.0.0.1:8000/detect \
+  -H "Content-Type: application/json" \
+  -d '{"text": "要检测的文本内容……"}'
+```
+
+返回：
+
+```json
+{
+  "language": "zh",
+  "tier": "tier1",
+  "ai_probability": 0.7405,
+  "bucket": "高",
+  "confidence": "中(80-200字 F1~0.98)",
+  "text_len": 107,
+  "latency_ms": 1.2
+}
+```
+
+字段说明：
+
+| 字段 | 含义 |
+|---|---|
+| `ai_probability` | 0–1，越大越像 AI 生成 |
+| `bucket` | 高(≥0.7) / 中(0.3–0.7) / 低(<0.3) |
+| `confidence` | 由**文本长度**决定的可靠度，短文本会主动向 0.5 收缩 |
+| `tier` | 实际使用的模型档位 |
+| `error` | 出现时表示输入无法判断，见下 |
+
+**被拒绝的输入**（此时 `ai_probability` 为 0，看 `error` 字段）：
+
+| `error` | 触发条件 |
+|---|---|
+| `no_meaningful_content` | 空或纯符号/空白（HTTP 200，`error` 字段标明） |
+| `empty text` | 完全没传 text（HTTP 400） |
+| `not_natural_language` | JSON / HTML / 代码 / 纯数字公式 |
+| `repetitive_content` | 大段重复（同一句话复制很多遍） |
+
+这些情况下我们**不给概率**——给 JSON 打分 0.42 看着很像结论，其实毫无意义。
+
+### `GET /info` — 机器画像
+
+返回核数、内存、是否有 torch、推荐的档位。第一次调用会导入 psutil（约 1.4 秒），之后走缓存。
+
+### `GET /health` — 健康检查
+
+```json
+{"status": "ok", "service": "aigc-detector"}
+```
+
+静止返回，不碰模型、不碰 psutil。容器探针/负载均衡/监控用这个，别用 `/info`。
+
+### Python 里直接调用（不走 HTTP）
+
+```python
+import sys; sys.path.insert(0, "src")
+import model_zoo as M
+
+M.warm_up()                       # 预热，之后每次 0.02ms
+r = M.detect("要检测的文本……")
+print(r["ai_probability"], r["bucket"])
+
+# 指定档位（默认 auto：按语言 + 机器性能自动选）
+r = M.detect("text", tier="tier0")
+```
+
+---
+
 ## 📁 项目结构
 
 ```

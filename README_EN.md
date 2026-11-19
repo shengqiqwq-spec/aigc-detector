@@ -152,6 +152,83 @@ python src/humanize_pro.py "your text" --target 0.3
 
 ---
 
+## 🔌 HTTP API
+
+Three endpoints, all CORS-open, safe to call straight from a browser.
+
+```bash
+python src/serve.py     # default http://127.0.0.1:8000
+```
+
+### `POST /detect`
+
+```bash
+curl -X POST http://127.0.0.1:8000/detect \
+  -H "Content-Type: application/json" \
+  -d '{"text": "the text to score"}'
+```
+
+```json
+{
+  "language": "en",
+  "tier": "en",
+  "ai_probability": 0.7405,
+  "bucket": "high",
+  "confidence": "medium (80-200 chars, F1~0.98)",
+  "text_len": 107,
+  "latency_ms": 1.2
+}
+```
+
+| field | meaning |
+|---|---|
+| `ai_probability` | 0-1, higher = more AI-like |
+| `bucket` | high (>=0.7) / medium (0.3-0.7) / low (<0.3) |
+| `confidence` | reliability implied by **length**; short text is pulled toward 0.5 on purpose |
+| `tier` | which model actually ran |
+| `error` | present when the input cannot be judged, see below |
+
+**Rejected inputs** (`ai_probability` is 0; read `error`):
+
+| `error` | trigger |
+|---|---|
+| `no_meaningful_content` | empty, or only punctuation/whitespace (HTTP 200, flagged in `error`) |
+| `empty text` | no `text` key at all (HTTP 400) |
+| `not_natural_language` | JSON / HTML / code / bare numbers or formulae |
+| `repetitive_content` | long spans repeated (the same sentence pasted many times) |
+
+No score is returned for these on purpose - reporting 0.42 for a JSON
+fragment looks like a finding but means nothing.
+
+### `GET /info`
+
+Cores, RAM, torch presence, recommended tier. First call imports psutil
+(~1.4 s), cached after that.
+
+### `GET /health`
+
+```json
+{"status": "ok", "service": "aigc-detector"}
+```
+
+Static, touches neither the model nor psutil. Use this for container
+probes, load balancers and monitoring - not `/info`.
+
+### Calling it from Python
+
+```python
+import sys; sys.path.insert(0, "src")
+import model_zoo as M
+
+M.warm_up()                       # then each detect() is ~0.02 ms
+r = M.detect("the text to score")
+print(r["ai_probability"], r["bucket"])
+
+r = M.detect("text", tier="tier0")   # force a tier; default is auto
+```
+
+---
+
 ## 📁 Project Structure
 
 ```
@@ -163,15 +240,18 @@ aigc-detector/
 ├── requirements.txt
 ├── src/
 │   ├── model_zoo.py     Detection entry (auto tier, portable)
-│   ├── serve.py         Local HTTP API
+│   ├── fast_infer.py    Pure-numpy inference (TF-IDF+LR, cold 1.7s->0.3s)
+│   ├── fast_nb.py       Pure-numpy inference (Hashing+NB, cold 1.4s->0.15s)
+│   ├── serve.py         Local HTTP API (/detect /info /health)
 │   ├── lang_router.py   Language detection
-│   ├── humanize_pro.py  14B humanizer (main)
-│   ├── humanize2.py     Rule-based humanizer
-│   ├── evasion_engine.py Programmatic humanizer
+│   ├── humanize_pro.py  14B humanizer (semantic rewrite)
+│   ├── humanize2.py     Rule-based humanizer (zero deps)
+│   ├── evasion_engine.py Programmatic humanizer (zero hallucination)
 │   └── style_features.py
-├── scripts/             Training scripts (reproducible)
-├── tests/               pytest suite (22 cases)
-├── ckpt/                Model weights (22MB)
+├── scripts/             Training and export scripts (reproducible)
+│   └── export_fast.py   Dump a sklearn model to fast.npz
+├── tests/               pytest suite (75 cases)
+├── ckpt/                Model weights (16MB, npz fast paths included)
 ├── .github/workflows/   CI automation
 └── docs/                Guides, model card, run report
 ```
