@@ -13,15 +13,17 @@ export AIGC_CKPT_DIR=/path/to/ckpt
 | 脚本 | 作用 | 产出 |
 |---|---|---|
 | `train_zh_v7.py` | **中文检测器**（当前线上版本） | `ckpt/detector_zh_final/` |
-| `train_en_v7.py` | **英文检测器**（当前线上版本） | `ckpt/detector_en_v5/` |
+| `train_zh_v8.py` | 中文 v8 实验：补 6 个文体盲区（**未上线**，见下） | `ckpt/detector_zh_v8_w*/` |
+| `train_en_v8.py` | **英文检测器 v8**（当前线上版本，修了 9% 假阳性） | `ckpt/detector_en_v5/` |
 | `gen_ai_text.py` | 用本地 LLM 生成当代 AI 文本（中/英） | `data/ai_{zh,en}_ov.jsonl` |
 | `gen_zh_short.py` | 专门生成短文本 AI 样本 | `data/ai_zh_short2.jsonl` |
 | `augment_data.py` | HC3 句子级增强 | — |
 | `clean_en_data.py` | 英文数据清洗 | — |
+| `gen_zh_blindspots.py` | 生成 6 个盲区文体（产品介绍/影评/攻略等） | `data/ai_zh_blindspots.jsonl` |
+| `clean_blindspots.py` | 严格清洗盲区数据（去元话语/标题/markdown） | `data/ai_zh_blindspots_clean.jsonl` |
 | `train_tier0.py` | **中文轻量档**（4MB，手机/嵌入式） | `ckpt/detector_tier0/` |
 | `train_en_tier0.py` | **英文轻量档** | `ckpt/detector_en_tier0/` |
 | `train_cnn_full.py` | CharTextCNN 极速档（需 torch） | `ckpt/detector_cnn_full/` |
-| `gh_api_push.py` | 绕过 github.com:443 封锁的推送工具 | — |
 
 ## 复现完整流程
 
@@ -114,3 +116,23 @@ joblib>=1.3
 ```
 
 生成数据另需 `openvino-genai`（或 llama.cpp + GGUF 模型）。
+
+## 为什么 `train_zh_v8.py` 没有上线
+
+它试图修 6 个文体盲区（产品介绍 / 学习方法 / 求职信 / 学术摘要 / 影评 / 旅游攻略），
+实测这 6 类 AI 文本的检测概率只有 0.10–0.17。
+
+生成 173 条专项样本、清洗、按 3/10/30/100 倍加权重训，结果是：
+
+| 盲区权重 | 盲区识别 | 独立 F1 |
+|---|---|---|
+| 3 | 0/6 | 0.9742 |
+| 10 | 1/6 | 0.9725 |
+| 30 | 1/6 | 0.9743 |
+| 100 | 2/6 | 0.9695 |
+
+最好也只到 2/6，而 F1 从 v7 的 0.9814 掉到 0.9743。**净负收益，所以不部署。**
+
+根因不是数据量：这类文本每句都由具体名词构成（型号、地名、片名、方法名），
+TF-IDF 判的是词频统计，不认识的词等于不存在。换模型架构才能解决。
+脚本保留下来，是为了别人换架构时可以复用这批数据和评估方法。
