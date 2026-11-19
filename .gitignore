@@ -23,6 +23,12 @@ _temp*
 memguard.log
 npu_run.log
 
+# 工具缓存
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
 # 系统
 .DS_Store
 Thumbs.db
