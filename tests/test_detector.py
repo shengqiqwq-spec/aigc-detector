@@ -328,6 +328,57 @@ class TestModelFiles:
 
 
 
+
+    def test_en_human_batch_low_fp(self):
+        """英文人类文本批量检测, 误判率应为0"""
+        import random as _r
+        hu = []
+        src = os.path.join(r"D:\ai_train\data", "hc3_en_real.jsonl")
+        if not os.path.exists(src):
+            import pytest as _p
+            _p.skip("英文语料不在本机")
+        with open(src, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    d = json.loads(line)
+                except Exception:
+                    continue
+                for h in d.get("human_answers", []):
+                    if isinstance(h, str) and 100 < len(h.strip()) < 600:
+                        hu.append(h.strip())
+                if len(hu) > 300:
+                    break
+        _r.seed(7); _r.shuffle(hu)
+        sample = hu[:100]
+        ps = [M._ALL_PREDICTORS["en"](t) for t in sample]
+        high = sum(1 for p in ps if p > 0.7)
+        assert high <= 2, f"英文人类误判为高的有 {high}/100"
+
+    def test_zh_human_batch_low_fp(self):
+        """中文人类文本批量检测误判率"""
+        import random as _r
+        hu = []
+        src = os.path.join(r"D:\ai_train\data", "hc3_all.jsonl")
+        if not os.path.exists(src):
+            import pytest as _p
+            _p.skip("中文语料不在本机")
+        with open(src, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    d = json.loads(line)
+                except Exception:
+                    continue
+                for h in d.get("human_answers", []):
+                    if isinstance(h, str) and 100 < len(h.strip()) < 600:
+                        hu.append(h.strip())
+                if len(hu) > 400:
+                    break
+        _r.seed(11); _r.shuffle(hu)
+        sample = hu[:100]
+        ps = [M.detect(t)["ai_probability"] for t in sample]
+        high = sum(1 for p in ps if p > 0.7)
+        assert high <= 3, f"中文人类误判为高的有 {high}/100"
+
     def test_short_text_not_overconfident(self):
         """短文本不应给出极端自信的判定 (曾对15字文本给 0.708 判高)"""
         txt = "人工智能技术正在深刻改变各行各业"[:15]
