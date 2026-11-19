@@ -12,6 +12,15 @@ sys.path.insert(0, _HERE)
 import gradio as gr
 import model_zoo as M
 
+# 后台线程预热模型, 不阻塞界面启动
+import threading
+def _warm():
+    try:
+        M.warm_up()
+    except Exception:
+        pass
+threading.Thread(target=_warm, daemon=True).start()
+
 
 def detect_fn(text):
     if not text or not text.strip():

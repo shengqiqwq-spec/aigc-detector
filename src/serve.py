@@ -9,6 +9,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import model_zoo as M
 
+# 启动即预热: 消除首次请求的冷启动延迟 (~2.7s -> 2ms)
+try:
+    M.warm_up()
+except Exception:
+    pass
+
 class Handler(http.server.BaseHTTPRequestHandler):
     def _cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -62,6 +68,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
 if __name__ == "__main__":
     PORT = 8000
     socketserver.TCPServer.allow_reuse_address = True
+    # 启动前预热, 让首个请求就是热的
+    import time as _t
+    _t0 = _t.time()
+    _loaded = M.warm_up()
+    print(f"模型预热完成: {', '.join(_loaded)} ({( _t.time()-_t0)*1000:.0f}ms)")
     print(f"检测服务启动: http://127.0.0.1:{PORT}")
     print(f"Demo页面:    http://127.0.0.1:{PORT}/")
     print("按 Ctrl+C 停止")

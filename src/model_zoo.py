@@ -26,15 +26,25 @@ _PROJ = os.path.dirname(_HERE) if os.path.basename(_HERE) == "src" else _HERE
 BASE = os.path.join(_PROJ, "ckpt")
 sys.path.insert(0, _HERE)
 
+_PROFILE_CACHE = None
+
 def detect_profile():
-    """检测机型性能, 返回推荐档位"""
-    import psutil
-    cores = psutil.cpu_count(logical=False) or 4
-    mem_gb = psutil.virtual_memory().total / 2**30
-    # 有无torch
+    """检测机型性能, 返回推荐档位 (结果缓存, 首次~1.7s, 后续0ms)"""
+    global _PROFILE_CACHE
+    if _PROFILE_CACHE is not None:
+        return dict(_PROFILE_CACHE)
+    cores, mem_gb, has_torch = 4, 8.0, False
     try:
-        import torch; has_torch = True
+        import psutil
+        cores = psutil.cpu_count(logical=False) or 4
+        mem_gb = psutil.virtual_memory().total / 2**30
     except ImportError:
+        pass
+    # torch 只在需要时探测, 避免昂贵导入拖慢启动
+    try:
+        import importlib.util
+        has_torch = importlib.util.find_spec("torch") is not None
+    except Exception:
         has_torch = False
     if mem_gb < 4 or cores <= 2:
         rec = "tier1"
@@ -42,18 +52,50 @@ def detect_profile():
         rec = "tier1"        # 基准测试显示tier1增强版综合最优
     else:
         rec = "tier1"
-    return {"cores": cores, "mem_gb": round(mem_gb, 1),
-            "has_torch": has_torch, "recommended": rec,
-            "os": platform.system()}
+    _PROFILE_CACHE = {"cores": cores, "mem_gb": round(mem_gb, 1),
+                      "has_torch": has_torch, "recommended": rec,
+                      "os": platform.system()}
+    return dict(_PROFILE_CACHE)
 
 # ---- 各档推理实现 (带缓存) ----
 _CACHE = {}
 
 def _load_joblib(*parts):
+    """加载模型文件。优先 .pkl (pickle, 快17倍), 回退 .joblib。"""
     key = tuple(parts)
     if key not in _CACHE:
-        _CACHE[key] = joblib.load(os.path.join(*parts))
+        path = os.path.join(*parts)
+        # 同名 .pkl 优先
+        pkl_path = path[:-len(".joblib")] + ".pkl" if path.endswith(".joblib") else path + ".pkl"
+        if os.path.exists(pkl_path):
+            import pickle
+            with open(pkl_path, "rb") as f:
+                _CACHE[key] = pickle.load(f)
+        else:
+            _CACHE[key] = joblib.load(path)
     return _CACHE[key]
+
+
+def warm_up(tiers=("tier1", "en")):
+    """预加载模型到内存, 消除首次调用的冷启动延迟 (~2.7s -> 0)。
+    可在服务启动时后台线程调用, 不阻塞主流程。"""
+    _PROBE = "这是一个用于预热模型的测试句子，内容足够长以便模型能够完成判断。"
+    # 一并预热硬件画像 (psutil 首次 import ~1.4s)
+    try:
+        detect_profile()
+    except Exception:
+        pass
+    loaded = []
+    for t in tiers:
+        fn = _ALL_PREDICTORS.get(t)
+        if fn is None:
+            continue
+        try:
+            fn(_PROBE)
+            loaded.append(t)
+        except Exception:
+            pass
+    return loaded
 
 def pred_tier1(text):
     d = os.path.join(BASE, "detector_zh_final")        # v7: F1=0.9812(分组防泄漏), 2146条当代数据
