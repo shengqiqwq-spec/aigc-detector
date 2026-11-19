@@ -327,6 +327,30 @@ class TestModelFiles:
             assert os.path.exists(p), f"{d} 缺 report.json"
 
 
+
+    def test_short_text_not_overconfident(self):
+        """短文本不应给出极端自信的判定 (曾对15字文本给 0.708 判高)"""
+        txt = "人工智能技术正在深刻改变各行各业"[:15]
+        r = M.detect(txt)
+        # 15字的判断本来就不可靠, 概率应向0.5收缩
+        assert 0.35 < r["ai_probability"] < 0.75, \
+            f"短文本过度自信: {r['ai_probability']:.3f}"
+
+    def test_long_text_not_over_shrunk(self):
+        """长文本不应被收缩影响, 该判高还是判高"""
+        txt = "首先，人工智能技术正在深刻改变各行各业。其次，在医疗领域，AI辅助诊断能提高效率；在教育领域，个性化学习系统能因材施教。总的来说，需要建立完善的监管框架来引导技术健康发展。"
+        r = M.detect(txt)
+        assert r["text_len"] > 80
+        assert r["ai_probability"] > 0.6, f"长AI文本被误收缩: {r['ai_probability']:.3f}"
+
+    def test_calibration_monotonic(self):
+        """同一文本, 越长越接近原始判断(收缩越小)"""
+        base = "人工智能技术正在深刻改变各行各业的监管框架需要完善" * 10
+        p_short = M.detect(base[:20])["ai_probability"]
+        p_long = M.detect(base[:200])["ai_probability"]
+        # 长文本不该比短文本更接近0.5
+        assert abs(p_long - 0.5) >= abs(p_short - 0.5) - 0.15
+
     def test_en_tier0_available(self):
         """英文轻量档存在且可用"""
         assert "en_tier0" in M._ALL_PREDICTORS

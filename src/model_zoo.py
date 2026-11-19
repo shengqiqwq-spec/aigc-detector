@@ -263,8 +263,19 @@ def detect(text, tier="auto"):
         chosen = "tier1"
     t0 = time.time()
     p = _ALL_PREDICTORS[chosen](text)
-    # 按长度给出置信度提示
     n = len(text)
+
+    # 长度校准: 短文本信息不足, 概率应向 0.5 收缩, 避免给出虚假的极端值
+    # 实测: 15字文本模型可能给 0.71, 但 15 字的判断本来就不可靠
+    if n < 40:
+        shrink = 0.45       # 最多收缩 45% 到 0.5
+        p = p + (0.5 - p) * shrink
+    elif n < 80:
+        shrink = 0.25
+        p = p + (0.5 - p) * shrink
+    elif n < 150:
+        shrink = 0.10
+        p = p + (0.5 - p) * shrink
     # 分桶F1来自 report.json 的实测评测(分组防泄漏切分)
     if n >= 200: confidence = "高(长文本 F1~0.99)"
     elif n >= 80: confidence = "中(80-200字 F1~0.98)"
