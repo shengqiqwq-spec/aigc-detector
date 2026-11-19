@@ -1,8 +1,9 @@
-# AI Text Detector & Humanizer
+# AI Text Detector & Rewriting Tool
 
 [中文](README.md) | **English**
 
-A **fully-local** toolkit for AIGC (AI-generated content) text detection and humanization, with a model matrix scaling from phones to desktops.
+A **fully-local** AIGC (AI-generated content) text detector, plus a conservative rewriting tool.
+Model matrix scales from phones to desktops, and the runtime needs nothing but numpy.
 
 ---
 
@@ -13,7 +14,7 @@ A **fully-local** toolkit for AIGC (AI-generated content) text detection and hum
 - **Bilingual**: auto-detects language and switches models automatically
 - **numpy only**: every tier ships a pure-numpy inference path, no sklearn needed
 - **100% local**: no network, no API cost, no data upload
-- **Zero-hallucination humanizer**: programmatic n-gram audit, never alters facts/numbers
+- **Zero-hallucination rewriting**: rule-based, never alters facts or numbers (but it barely moves the AI score — see below)
 
 > 📖 Read **[怎么用好](docs/怎么用好.md)** first (Chinese) - it explains when the
 > detector is reliable, when it silently fails, and why it returns "cannot judge"
