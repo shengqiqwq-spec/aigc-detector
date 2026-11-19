@@ -185,6 +185,68 @@ class TestPublicAPI:
         assert "高" in r["confidence"]
 
 
+class TestLangRouterBoundaries:
+    """语言判断的边界 —— 判错语言会让整个模型选错"""
+
+    def test_pure_chinese(self):
+        sys.path.insert(0, SRC)
+        import lang_router as L
+        assert L.detect_lang("这是一个中文句子。") == "zh"
+
+    def test_pure_english(self):
+        sys.path.insert(0, SRC)
+        import lang_router as L
+        assert L.detect_lang("This is an English sentence.") == "en"
+
+    def test_mixed_prefers_dominant(self):
+        sys.path.insert(0, SRC)
+        import lang_router as L
+        assert L.detect_lang("机器学习 machine learning 是 AI 的核心部分") == "zh"
+        assert L.detect_lang("The quick brown fox 跳过了 the lazy dog") == "en"
+
+    def test_empty_and_whitespace_default_english(self):
+        sys.path.insert(0, SRC)
+        import lang_router as L
+        assert L.detect_lang("") == "en"
+        assert L.detect_lang("   \n\t ") == "en"
+
+    def test_threshold_boundary(self):
+        """20% 是阈值: 恰好 20% 判中文, 略低于则判英文"""
+        sys.path.insert(0, SRC)
+        import lang_router as L
+        exactly_20 = "a" * 8 + "中中"        # 2/10
+        assert L.detect_lang(exactly_20) == "zh"
+        under_20 = "a" * 9 + "中"            # 1/10
+        assert L.detect_lang(under_20) == "en"
+
+    def test_detail_fields(self):
+        sys.path.insert(0, SRC)
+        import lang_router as L
+        d = L.detect_lang_detail("中文 abc")
+        for k in ("lang", "cjk_ratio", "cjk_chars", "latin_chars", "total"):
+            assert k in d
+        assert d["cjk_chars"] == 2
+        assert d["latin_chars"] == 3
+
+    def test_detail_on_empty_does_not_divide_by_zero(self):
+        sys.path.insert(0, SRC)
+        import lang_router as L
+        d = L.detect_lang_detail("")
+        assert d["cjk_ratio"] == 0
+        assert d["total"] == 0
+
+    def test_japanese_kanji_is_detected_as_chinese(self):
+        """已知局限: 日文汉字落在 CJK 区, 会被判成中文
+
+        这不是可以修的 bug (纯字符区间判断分不出中日), 但必须让行为可见:
+        如果一个用户拿日文来检测, 它会走中文模型。
+        """
+        sys.path.insert(0, SRC)
+        import lang_router as L
+        d = L.detect_lang_detail("日本語のテキストです")
+        assert d["lang"] == "zh", "行为变了, 请更新这条测试和文档"
+
+
 class TestModelFiles:
     """仓库发布的模型文件必须完整且不含 pickle"""
 
