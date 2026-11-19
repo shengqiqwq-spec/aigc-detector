@@ -344,13 +344,21 @@ aigc-detector/
 │   ├── humanize2.py     规则降AI（零依赖）
 │   ├── evasion_engine.py 程序化降AI（零幻觉）
 │   └── style_features.py
-├── scripts/             训练与导出脚本（可复现）
-│   └── export_fast.py   把 sklearn 模型导出为 fast.npz
-├── tests/               pytest 测试（75 用例）
-├── ckpt/                模型权重（16MB）
-├── .github/workflows/   CI 自动测试
+├── scripts/             训练与导出脚本（可复现，路径可移植）
+│   ├── export_fast.py   把 sklearn 模型导出为 fast.npz
+│   ├── train_zh_v7.py   中文检测器（线上版本）
+│   ├── train_en_v8.py   英文检测器（线上版本）
+│   └── README.md        训练脚本说明
+├── tests/               pytest 测试（151 个用例，4 个文件）
+│   ├── test_detector.py 检测核心、文体、改写完整性
+│   ├── test_cli.py      CLI、语言路由、机型探测、公文语域
+│   ├── test_serve.py    起真进程打 HTTP
+│   └── test_ui_logic.py Gradio 回调
+├── ckpt/                模型权重（7.6MB，含纯 numpy npz）
+├── .github/workflows/   CI（Ubuntu/Windows × Py3.11/3.13/3.14 + 纯 numpy）
 └── docs/
     ├── 使用指南.md
+    ├── 怎么用好.md          使用者必读：什么情况准、什么情况失灵
     ├── MODEL_CARD.md           模型卡（指标、局限、使用边界）
     ├── 运行报告_2026-11-20.md   最近一次通宵调试
     └── 运行报告_2026-11-17.md   首夜记录（历史归档）
@@ -509,6 +517,25 @@ CI 会在 Ubuntu / Windows 上自动跑全部测试（Python 3.11 / 3.13 / 3.14�
 | 英文人类（2500 条） | **0.56% 误判** |
 | 分领域（7 领域 420 条） | 全领域 100% |
 | 长文本（>200 字） | **F1 = 0.9899** |
+
+**延迟**（500 次调用，单线程）：
+
+| 档位 | 中位 | p95 |
+|---|---|---|
+| tier1（中文主力） | **0.044ms** | 0.047ms |
+| en（英文） | **0.103ms** | 0.141ms |
+| tier0（轻量档） | **0.272ms** | 0.306ms |
+
+tier0 反而最慢——它走 Hashing+NB，没有稀疏矩阵乘法的优化；
+它存在的理由是内存小（421KB vs 2.6MB），不是快。
+
+**并发与稳定性**：
+
+| 测试 | 结果 |
+|---|---|
+| 32 线程 × 50 次 × 2 文本（直接调库） | **7339 req/s**，0 错误 |
+| 20 线程并发 HTTP | **436 req/s**，0 错误，800 次结果完全一致 |
+| 2000 次连续 HTTP 请求 | 内存 **5.3MB 恒定**，零增长 |
 
 ---
 

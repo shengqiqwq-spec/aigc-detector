@@ -440,6 +440,25 @@ so it learned general AI-writing features rather than one model's fingerprint.
 | Cross-domain (7 domains, 420) | 100% in every domain |
 | Long text (>200 chars) | **F1 = 0.9899** |
 
+**Latency** (500 calls, single thread):
+
+| Tier | Median | p95 |
+|---|---|---|
+| tier1 (Chinese default) | **0.044ms** | 0.047ms |
+| en (English) | **0.103ms** | 0.141ms |
+| tier0 (lightweight) | **0.272ms** | 0.306ms |
+
+tier0 is the slowest - it runs Hashing+NB without sparse matmul optimisation.
+It exists for its 421KB footprint, not its speed.
+
+**Concurrency and stability**:
+
+| Test | Result |
+|---|---|
+| 32 threads x 50 calls x 2 texts (in-process) | **7339 req/s**, 0 errors |
+| 20 concurrent HTTP clients | **436 req/s**, 0 errors, all 800 results identical |
+| 2000 sequential HTTP requests | memory flat at **5.3MB** |
+
 ---
 
 ## 🤝 Technical Notes
