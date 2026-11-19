@@ -623,5 +623,72 @@ class TestGradioDispatch:
             assert out != src, f"「{choice}」静默返回原文, dispatch 失配"
 
 
+class TestFastInferParity:
+    """纯 numpy 推理器必须与 sklearn 数值一致, 否则加速无意义"""
+
+    TEXTS = [
+        "人工智能技术正在深刻改变各行各业。在医疗领域，AI辅助诊断能提高效率。",
+        "今天下午去超市买了点菜，回来路上碰到老同学，聊了半个多小时。",
+        "各部门：为提升员工素质，经研究决定开展年度培训计划。请各部门高度重视。",
+        "深度学习模型需要大量标注数据和计算资源才能训练出可用的效果。",
+    ]
+
+    def test_chinese_parity(self):
+        """中文单特征: numpy 路径与 sklearn 差异必须 < 1e-5"""
+        pytest.importorskip("sklearn")
+        import pickle
+        import numpy as np
+        from fast_infer import FastDetector
+
+        d = os.path.join(M.BASE, "detector_zh_final")
+        if not os.path.exists(os.path.join(d, "fast.npz")):
+            pytest.skip("fast.npz 未导出")
+
+        vec = pickle.load(open(os.path.join(d, "tfidf.pkl"), "rb"))
+        clf = pickle.load(open(os.path.join(d, "clf.pkl"), "rb"))
+        fast = FastDetector(d)
+
+        for t in self.TEXTS:
+            expect = float(clf.predict_proba(vec.transform([t]))[0, 1])
+            got = fast.predict_proba(t)
+            assert abs(expect - got) < 1e-5, f"中文数值不一致: {expect} vs {got}"
+
+    def test_english_dual_parity(self):
+        """英文双特征: hstack 后 sklearn 不二次归一, numpy 必须复现这点"""
+        pytest.importorskip("sklearn")
+        import pickle
+        from scipy.sparse import hstack
+        from fast_infer import FastDetector
+
+        d = os.path.join(M.BASE, "detector_en_v5")
+        if not os.path.exists(os.path.join(d, "fast.npz")):
+            pytest.skip("英文 fast.npz 未导出")
+
+        v1 = pickle.load(open(os.path.join(d, "v1.pkl"), "rb"))
+        v2 = pickle.load(open(os.path.join(d, "v2.pkl"), "rb"))
+        clf = pickle.load(open(os.path.join(d, "clf.pkl"), "rb"))
+        fast = FastDetector(d)
+
+        for t in ["Artificial intelligence represents a transformative paradigm shift.",
+                  "so i finally tried that new coffee place downtown, not worth it.",
+                  "The team met to discuss the quarterly roadmap and priorities."]:
+            X = hstack([v1.transform([t]), v2.transform([t])])
+            expect = float(clf.predict_proba(X)[0, 1])
+            got = fast.predict_proba(t)
+            assert abs(expect - got) < 1e-5, f"英文数值不一致: {expect} vs {got}"
+
+    def test_model_zoo_uses_fast_path(self):
+        """model_zoo 应走快路径, 且结果与直接调用一致"""
+        import model_zoo as _M
+        from fast_infer import FastDetector
+
+        d = os.path.join(_M.BASE, "detector_zh_final")
+        if not os.path.exists(os.path.join(d, "fast.npz")):
+            pytest.skip("fast.npz 未导出")
+        fast = FastDetector(d)
+        for t in self.TEXTS:
+            assert abs(_M.pred_tier1(t) - fast.predict_proba(t)) < 1e-9
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

@@ -74,15 +74,20 @@ def _load_joblib(*parts):
     return _CACHE[key]
 
 
-def warm_up(tiers=("tier1", "en")):
-    """预加载模型到内存, 消除首次调用的冷启动延迟 (~2.7s -> 0)。
-    可在服务启动时后台线程调用, 不阻塞主流程。"""
+def warm_up(tiers=("tier1", "en"), profile=False):
+    """预加载模型到内存, 消除首次调用的冷启动延迟 (~1.3s -> 0)。
+
+    可在服务启动时后台线程调用, 不阻塞主流程。
+
+    profile=False (默认) 跳过硬件画像: psutil 首次 import 约 1.4s, 而纯检测
+    不需要它。只有要展示逐档性能建议时才传 profile=True。
+    """
     _PROBE = "这是一个用于预热模型的测试句子，内容足够长以便模型能够完成判断。"
-    # 一并预热硬件画像 (psutil 首次 import ~1.4s)
-    try:
-        detect_profile()
-    except Exception:
-        pass
+    if profile:
+        try:
+            detect_profile()
+        except Exception:
+            pass
     loaded = []
     for t in tiers:
         fn = _ALL_PREDICTORS.get(t)
@@ -95,8 +100,30 @@ def warm_up(tiers=("tier1", "en")):
             pass
     return loaded
 
+# ---- 纯 numpy 快路径 (冷启动 1.7s -> 0.3s) ----
+# 优先用 fast.npz; 没有 npz 或配置不支持时回退 sklearn。
+_FAST_CACHE = {}
+
+
+def _fast(model_dir, analyzer=None):
+    """取缓存的 FastDetector, 不可用返回 None"""
+    key = (model_dir, analyzer)
+    if key in _FAST_CACHE:
+        return _FAST_CACHE[key]
+    try:
+        from fast_infer import FastDetector
+        d = FastDetector(model_dir, analyzer)
+    except Exception:
+        d = None
+    _FAST_CACHE[key] = d
+    return d
+
+
 def pred_tier1(text):
-    d = os.path.join(BASE, "detector_zh_final")        # v7: F1=0.9812(分组防泄漏), 2146条当代数据
+    d = os.path.join(BASE, "detector_zh_final")        # 分组防泄漏 F1=0.9802
+    fd = _fast(d, "char")
+    if fd is not None:
+        return float(fd.predict_proba(text))
     vec = _load_joblib(d, "tfidf.joblib")
     clf = _load_joblib(d, "clf.joblib")
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
@@ -211,8 +238,11 @@ def pred_en_tier0(text):
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
 
 def pred_en(text):
-    """英文检测器 v7: 分组防泄漏切分 F1=0.9917, char_wb+word 双特征"""
+    """英文检测器: 分组防泄漏切分 F1=0.9905, char_wb+word 双特征"""
     d = os.path.join(BASE, "detector_en_v5")
+    fd = _fast(d)
+    if fd is not None:
+        return float(fd.predict_proba(text))
     clf = _load_joblib(d, "clf.joblib")
     # 双特征模型 (v1=char_wb, v2=word); 回退兼容单特征旧模型
     try:

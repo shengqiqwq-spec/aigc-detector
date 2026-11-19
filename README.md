@@ -205,15 +205,29 @@ taskkill /F /PID <PID>
 只有 `tier3`（CNN 档）需要 torch。默认的 `tier1`/`en` 不需要，且准确率更高。
 要么 `pip install torch`，要么直接用默认档。
 
-### 第一次检测很慢（约 2 秒）
+### 第一次检测很慢
 
-那是 Python 导入 sklearn/scipy 的开销，不是模型慢。
-服务已内置 `warm_up()` 预热；自己写脚本时可以先调一次：
+那是 Python 导入 sklearn 的开销（单这一项就 1.2 秒），不是模型慢。
+
+**已优化**：模型现在同时附带 `fast.npz`（纯数组格式），加载时不碰 sklearn，
+冷启动从 **1719 ms 降到 575 ms**。模型目录里有没有 `fast.npz` 都能用——
+有就走快路径，没有自动回退到 sklearn。
+
+自己写脚本时仍建议先预热一次：
 
 ```python
 import model_zoo as M
 M.warm_up()          # 之后每次 detect 只要 1~2 ms
 ```
+
+想给其他模型也生成快路径（例如自己重训的）：
+
+```bash
+python scripts/export_fast.py ckpt/detector_zh_final          # 单特征
+python scripts/export_fast.py ckpt/detector_en_v5 --dual      # 双特征
+```
+
+纯 numpy 推理与 sklearn 数值一致到 **1e-8**（有测试守门）。
 
 ### 短文本判定飘忽
 

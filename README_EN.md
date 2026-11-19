@@ -194,15 +194,30 @@ To use another port, change `PORT = 8000` at the end of `src/serve.py`.
 Only `tier3` (the CNN tier) needs torch. The default `tier1` / `en` do not,
 and they are more accurate. Either `pip install torch`, or just use the default.
 
-### The first detection takes ~2 seconds
+### The first detection is slow
 
-That is Python importing sklearn/scipy, not the model. The server already
-calls `warm_up()` at startup. In your own script:
+That is Python importing sklearn (1.2 s of it on its own), not the model.
+
+**Now optimized**: each model ships a `fast.npz` (plain arrays) that loads
+without touching sklearn, cutting cold start from **1719 ms to 575 ms**.
+It works either way - with the npz you get the fast path, without it the
+code falls back to sklearn.
+
+Pre-warming is still worth it in your own scripts:
 
 ```python
 import model_zoo as M
 M.warm_up()          # afterwards each detect() takes 1-2 ms
 ```
+
+To generate the fast path for a model you trained yourself:
+
+```bash
+python scripts/export_fast.py ckpt/detector_zh_final          # single vectorizer
+python scripts/export_fast.py ckpt/detector_en_v5 --dual      # two vectorizers
+```
+
+The numpy inference matches sklearn to **1e-8**, which a test enforces.
 
 ### Short text gives jumpy results
 
