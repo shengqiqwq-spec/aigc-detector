@@ -437,7 +437,7 @@ so it learned general AI-writing features rather than one model's fingerprint.
 | Real Qwen AI texts (75) | **100% flagged High**, avg 0.985 |
 | Chinese human texts (2500) | **0.52% false positive** |
 | English human texts (2500) | **0.56% false positive** |
-| Cross-domain (7 domains, 420) | 100% in every domain |
+| **Blind test (180 samples, fresh seed, not used for tuning)** | **99.4%** correct (178/179), **0** human misclassified |
 | Long text (>200 chars) | **F1 = 0.9899** |
 
 **Latency** (500 calls, single thread):
