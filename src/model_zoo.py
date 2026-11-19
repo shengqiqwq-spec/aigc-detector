@@ -7,12 +7,12 @@ AIGC 检测器 - 统一模型矩阵框架
   tier1  - TF-IDF+LR        (9MB,  F1~0.977, 手机/4GB, 毫秒级)
   tier2  - TFIDF-SVD+SVC    (187MB,F1~0.970, 主流PC, 需sklearn)
   tier2b - FastText         (3.7MB,词向量, 嵌入式/低配)
-  tier3  - CharTextCNN      (3.3MB,F1~0.973, 主流PC, 需torch)
+  tier3  - CharTextCNN      (5.1MB, 需torch, 无torch环境会自动跳过)
   en     - 英文TF-IDF       (demo级, 待真实数据)
 
 用法:
   python model_zoo.py "文本"                 # 自动选档
-  python model_zoo.py "文本" --tier tier3    # 指定档位
+  python model_zoo.py "文本" --tier tier0    # 指定档位
   python model_zoo.py --benchmark            # 跑各档基准对比
   python model_zoo.py --info                 # 显示机型检测结果和推荐档位
 """
@@ -169,10 +169,6 @@ def pred_tier0(text):
     clf = _load_joblib(d, "clf.joblib")
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
 
-def pred_ensemble(text):
-    """集成: 严格评估显示 tier1 权重1.0+tier3 0.2 最优(F1=0.9691)"""
-    return float(0.83 * pred_tier1(text) + 0.17 * pred_tier3(text))
-
 def pred_tier2_light(text):
     """Tier2轻量版(41MB, F1=0.962)"""
     d = os.path.join(BASE, "detector_tier2_light")
@@ -209,7 +205,6 @@ def pred_en(text):
 _ALL_PREDICTORS = dict(PREDICTORS)
 _ALL_PREDICTORS["en"] = pred_en
 _ALL_PREDICTORS["tier0"] = pred_tier0
-_ALL_PREDICTORS["ensemble"] = pred_ensemble
 
 def bucket(p):
     return "高" if p >= 0.7 else ("中" if p >= 0.3 else "低")
