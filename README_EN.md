@@ -162,6 +162,26 @@ Especially welcome:
 
 ---
 
+
+## 🔬 External Validation (held-out data)
+
+Measured on data the model **never saw during training**:
+
+| Test set | N | Result |
+|---|---|---|
+| Chinese human text | 500 | **0.0% false positive** (mean 0.012) |
+| Chinese GPT-3.5 | 500 | **99.6% flagged** (mean 0.967) |
+| Chinese Qwen-1.5B (modern) | 80 | **100% flagged** (mean 0.969) |
+| Chinese Qwen3-VL-30B (cross-model) | 23 | **95.7% flagged** (mean 0.867) |
+| English human text | 506 | **99.6% correct** (mean 0.012) |
+| English GPT-3.5 | 294 | **100% flagged** (mean 0.986) |
+| English Qwen-1.5B (modern) | 56 | **100% flagged** (mean 0.953) |
+
+Works across three different model families (GPT-3.5 / Qwen-1.5B / Qwen3-VL-30B),
+so it learned general AI-writing features rather than one model's fingerprint.
+
+---
+
 ## ⚠️ Known Limitations
 
 1. **Short text is weaker**: <50 chars carries too little signal — inherent ambiguity (information-theoretic ceiling)
