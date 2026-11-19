@@ -315,7 +315,7 @@ curl -X POST http://127.0.0.1:8000/detect \
 import sys; sys.path.insert(0, "src")
 import model_zoo as M
 
-M.warm_up()                       # 预热，之后每次 0.02ms
+M.warm_up()                       # 预热，之后每次 0.04ms（tier1 实测中位）
 r = M.detect("要检测的文本……")
 print(r["ai_probability"], r["bucket"])
 
@@ -390,7 +390,7 @@ clone 体积小 78%。想自己重训的用户生成 pkl 后跑 `scripts/export_
 
 ```python
 import model_zoo as M
-M.warm_up()          # 之后每次 detect 只要 1~2 ms
+M.warm_up()          # 之后每次 detect 0.04ms(tier1) / 0.10ms(en) / 0.27ms(tier0)
 ```
 
 想给其他模型也生成快路径（例如自己重训的）：
