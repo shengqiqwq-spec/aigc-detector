@@ -70,8 +70,8 @@ Windows users can double-click `启动Demo.bat`.
 | tier0 | **100%** | **100%** | mobile tier, retrained on new data |
 
 **Training data**: HC3 raw QA pairs + locally generated modern AI text
-(2,941 Chinese / 1,560 English, including 500 Chinese and 400 English
-short-text samples added specifically to fix the short-input weakness).
+(3,040 Chinese / 1,694 English, including short-text samples and deliberate
+cross-model samples from a second generator).
 
 > All four tiers are retrained on the current data with grouped, leak-free splits.
 
