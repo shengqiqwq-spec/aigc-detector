@@ -1,20 +1,13 @@
 {
-  "f1": 0.9905,
+  "f1": 0.9841,
+  "false_positive_rate": 0.0009,
+  "recall": 0.988,
   "C": 10,
-  "train_n": 43358,
-  "ind_n": 9502,
-  "ai_new": 1695,
-  "model": "en_v7",
-  "短(<500)": {
-    "f1": 0.9513,
-    "n": 2896
-  },
-  "中(500-1500)": {
-    "f1": 0.9939,
-    "n": 5666
-  },
-  "长(>1500)": {
-    "f1": 0.9894,
-    "n": 940
-  }
+  "class_weight": "balanced",
+  "train_n": 27943,
+  "ind_n": 6097,
+  "human_n": 40847,
+  "ai_new_n": 1702,
+  "model": "en_v8",
+  "note": "v8: class_weight=balanced to fix English false positives (9-12% -> 0.2%)"
 }

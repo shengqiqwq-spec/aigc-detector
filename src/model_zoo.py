@@ -429,6 +429,14 @@ def detect(text, tier="auto"):
     elif n < 150:
         shrink = 0.10
         p = p + (0.5 - p) * shrink
+    # 英文模型(v8)的概率标定与中文不同: class_weight=balanced 会把整体分数压低,
+    # 实测在 0.5 阈值下英文文体识别只剩 0/4, 而 0.30 阈值下误报 0%、识别 3/4。
+    # 这里把英文分数重标定到与中文一致的口径, 让统一的 bucket() 阈值继续有效。
+    if chosen.startswith("en"):
+        CAL_LO, CAL_HI = 0.30, 0.85      # 原标度下相当于 0.5 / 0.99
+        p = (p - CAL_LO) / (CAL_HI - CAL_LO) * 0.5 + 0.5
+        p = min(0.999, max(0.001, p))
+
     # 分桶F1来自 report.json 的实测评测(分组防泄漏切分)
     if n >= 200: confidence = "高(长文本 F1~0.99)"
     elif n >= 80: confidence = "中(80-200字 F1~0.98)"

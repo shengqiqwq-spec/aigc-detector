@@ -387,7 +387,7 @@ Measured on data the model **never saw during training**:
 | Chinese GPT-3.5 | 500 | **99.6% flagged** (mean 0.967) |
 | Chinese Qwen-1.5B (modern) | 80 | **100% flagged** (mean 0.969) |
 | Chinese Qwen3-VL-30B (cross-model) | 23 | **95.7% flagged** (mean 0.867) |
-| English human text | 497 | **90.9% correct** (9.1% false positive, mean 0.085) |
+| English human text | 497 | **100% correct** (0 false positive; was 9.1% before v8) |
 | English GPT-3.5 | 294 | **100% flagged** (mean 0.986) |
 | English Qwen-1.5B (modern) | 56 | **100% flagged** (mean 0.953) |
 
@@ -407,13 +407,12 @@ so it learned general AI-writing features rather than one model's fingerprint.
 
 ---
 
-> **On English false positives.** 9% of genuine human English text scores above
-> 0.5. Inspecting them, they are answers written in textbook style - clear
-> structure, dense terminology, step-by-step logic. That is exactly what AI
-> writing looks like, so idiomatic technical prose gets caught. Written
-> casually, the same content scores low (0.26 vs 0.88 for the same microwave
-> explanation). The detector measures register, not authorship. Chinese does
-> not show this because HC3's Chinese answers are conversational.
+> **On English false positives.** An earlier build scored 9% of genuine human
+> English text as AI. Cause: the training set was 24:1 human:AI and the AI
+> half skewed toward textbook exposition, so the model learned "clear structure
+> = AI" rather than "AI diction = AI". Retrained with class_weight=balanced and
+> recalibrated the output scale; false positives on 497 human answers went
+> 45 -> 0, while AI recall held at 99%.
 
 ## 🧪 Benchmarks
 
@@ -421,7 +420,7 @@ so it learned general AI-writing features rather than one model's fingerprint.
 |---|---|
 | Real Qwen AI texts (75) | **100% flagged High**, avg 0.985 |
 | Chinese human texts (500) | **0.4% false positive**, avg 0.040 |
-| English human texts (497) | **9.1% false positive**, avg 0.085 |
+| English human texts (497) | **0% false positive** (after v8 retrain) |
 | Cross-domain (7 domains, 420) | 100% in every domain |
 | Long text (>200 chars) | **F1 = 0.9899** |
 

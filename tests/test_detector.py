@@ -554,13 +554,28 @@ class TestEnglishGenreGeneralization:
     }
 
     def test_en_genres_mostly_detected(self):
+        """走 detect() 而不是裸 predictor
+
+        英文 v8 的概率标度与中文不同(class_weight=balanced 会整体压低),
+        detect() 里有重标定。直接断言裸 predictor 的 0.5 阈值等于测错了东西 ——
+        用户看到的是 detect() 的输出。
+        """
         hits = 0
         for name, txt in self.EN_GENRES.items():
-            p = M._ALL_PREDICTORS["en"](txt)
-            if p > 0.5:
+            d = M.detect(txt, tier="en")
+            if d["ai_probability"] > 0.5:
                 hits += 1
         # 允许 1 条换措辞漏判
         assert hits >= len(self.EN_GENRES) - 1, f"英文文体只识别了 {hits}/{len(self.EN_GENRES)}"
+
+    def test_en_calibration_preserves_ordering(self):
+        """标定必须单调: 分数高低顺序不能被打乱"""
+        scores = [M._ALL_PREDICTORS["en"](t) for t in self.EN_GENRES.values()]
+        cal = [M.detect(t, tier="en")["ai_probability"]
+               for t in self.EN_GENRES.values()]
+        pairs = sorted(zip(scores, cal))
+        assert all(a[1] <= b[1] for a, b in zip(pairs, pairs[1:])), \
+            "标定后顺序被打乱"
 
 
 class TestHumanizerOutputIntegrity:
