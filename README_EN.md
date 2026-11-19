@@ -9,7 +9,7 @@ A **fully-local** toolkit for AIGC (AI-generated content) text detection and hum
 ## ✨ Highlights
 
 - **4 model tiers**: 2MB (mobile) → 14MB (universal), auto-selected by hardware
-- **Chinese detection F1 = 0.9802** (leak-free grouped split; 99.25% on long text)
+- **Chinese detection F1 = 0.9797** (leak-free grouped split; 98.82% on long text)
 - **Bilingual**: auto-detects language and switches models automatically
 - **100% local**: no network, no API cost, no data upload
 - **Zero-hallucination humanizer**: programmatic n-gram audit, never alters facts/numbers
@@ -55,7 +55,7 @@ Windows users can double-click `启动Demo.bat`.
 
 | Tier | Model | Size | Overall F1 | Short | Long | Use Case |
 |---|---|---|---|---|---|---|
-| **zh_final** ⭐ | TF-IDF+LR | 13MB | **0.9802** | 0.9336 | 0.9925 | All machines (default) |
+| **zh_final** ⭐ | TF-IDF+LR | 13MB | **0.9797** | 0.9514 | 0.9882 | All machines (default) |
 | en_v5 | TF-IDF+LR dual | 12MB | **0.9905** | 0.9513 | 0.9894 | English |
 | tier3 | CharTextCNN | 1.9MB | **0.9709** | — | — | Needs torch, 0.5ms |
 | tier0 | Hashing+NB | 4.2MB | **0.9144** | — | — | Mobile (Chinese) |
@@ -332,7 +332,7 @@ so it learned general AI-writing features rather than one model's fingerprint.
 ### Why TF-IDF instead of Transformers?
 
 Measured on CPU: roberta-base takes 33 s per training step (44 min for 80 steps) — completely impractical.
-Switched to character-level TF-IDF + logistic regression: **trains in 68 s, with higher F1** (0.9802).
+Switched to character-level TF-IDF + logistic regression: **trains in 68 s, with higher F1**.
 
 ### Why mix in Qwen-generated data?
 
