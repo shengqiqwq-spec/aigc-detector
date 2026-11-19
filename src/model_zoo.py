@@ -108,22 +108,6 @@ def pred_tier1o(text):
     clf = _load_joblib(d, "clf.joblib")
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
 
-def pred_tier2(text):
-    d = os.path.join(BASE, "detector_tier2b")
-    clf = _load_joblib(d, "clf.joblib")
-    vec = _load_joblib(d, "tfidf.joblib")
-    svd = _load_joblib(d, "svd.joblib")
-    scaler = _load_joblib(d, "scaler.joblib")
-    from style_features import style_features
-    import numpy as np
-    sf = scaler.transform(style_features([text]))
-    X = svd.transform(vec.transform([text]))
-    F = np.hstack([X, sf])
-    if hasattr(clf, "decision_function"):
-        s = clf.decision_function(F)[0]
-        return float(1/(1+2.718281828**(-s)))
-    return float(clf.predict_proba(F)[0, 1])
-
 def _make_cnn_predictor(ckpt_dir):
     import torch, torch.nn as nn
     d = os.path.join(BASE, ckpt_dir)
@@ -168,23 +152,6 @@ def pred_tier0(text):
     vec = _load_joblib(d, "vec.joblib")
     clf = _load_joblib(d, "clf.joblib")
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
-
-def pred_tier2_light(text):
-    """Tier2轻量版(41MB, F1=0.962)"""
-    d = os.path.join(BASE, "detector_tier2_light")
-    clf = _load_joblib(d, "clf.joblib")
-    vec = _load_joblib(d, "tfidf.joblib")
-    svd = _load_joblib(d, "svd.joblib")
-    scaler = _load_joblib(d, "scaler.joblib")
-    from style_features import style_features
-    import numpy as np
-    sf = scaler.transform(style_features([text]))
-    X = svd.transform(vec.transform([text]))
-    F = np.hstack([X, sf])
-    if hasattr(clf, "decision_function"):
-        s = clf.decision_function(F)[0]
-        return float(1/(1+2.718281828**(-s)))
-    return float(clf.predict_proba(F)[0, 1])
 
 def pred_en(text):
     """英文检测器 v7: 分组防泄漏切分 F1=0.9917, char_wb+word 双特征"""
