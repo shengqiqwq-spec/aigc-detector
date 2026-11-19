@@ -9,7 +9,7 @@ A **fully-local** toolkit for AIGC (AI-generated content) text detection and hum
 ## ✨ Highlights
 
 - **4 model tiers**: 2MB (mobile) → 14MB (universal), auto-selected by hardware
-- **Chinese detection F1 = 0.9798** (leak-free grouped split, 5,825 held-out samples; 98.92% on long text)
+- **Chinese detection F1 = 0.9834** (leak-free grouped split, 5,753 held-out samples; 99.27% on long text)
 - **Bilingual**: auto-detects language and switches models automatically
 - **100% local**: no network, no API cost, no data upload
 - **Zero-hallucination humanizer**: programmatic n-gram audit, never alters facts/numbers
@@ -55,7 +55,7 @@ Windows users can double-click `启动Demo.bat`.
 
 | Tier | Model | Size | Overall F1 | Short | Long | Use Case |
 |---|---|---|---|---|---|---|
-| **zh_final** ⭐ | TF-IDF+LR | 14MB | **0.9798** | 0.9456 | 0.9774 | All machines (default) |
+| **zh_final** ⭐ | TF-IDF+LR | 14MB | **0.9834** | 0.9431 | 0.9831 | All machines (default) |
 | en_v5 | TF-IDF+LR | 13MB | **0.9939** | 0.9825 | 0.9954 | English |
 | cnn_full | CharTextCNN | 5.1MB | 0.9540 | — | — | Ultra-fast 21ms |
 | tier0 | Hashing+NB | 2.1MB | 0.8853 | 0.890 | 0.963 | Mobile / embedded |
@@ -199,7 +199,7 @@ so it learned general AI-writing features rather than one model's fingerprint.
 | Real Qwen AI texts (75) | **100% flagged High**, avg 0.985 |
 | Human texts (50) | **0% false positive**, avg 0.019 |
 | Cross-domain (7 domains, 420) | 100% in every domain |
-| Long text (>200 chars) | **F1 = 0.9892** |
+| Long text (>200 chars) | **F1 = 0.9927** |
 
 ---
 
@@ -208,7 +208,7 @@ so it learned general AI-writing features rather than one model's fingerprint.
 ### Why TF-IDF instead of Transformers?
 
 Measured on CPU: roberta-base takes 33 s per training step (44 min for 80 steps) — completely impractical.
-Switched to character-level TF-IDF + logistic regression: **trains in 68 s, with higher F1** (0.9798).
+Switched to character-level TF-IDF + logistic regression: **trains in 68 s, with higher F1** (0.9834).
 
 ### Why mix in Qwen-generated data?
 
