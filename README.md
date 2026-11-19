@@ -361,6 +361,8 @@ M.warm_up()          # 之后每次 detect 只要 1~2 ms
 想给其他模型也生成快路径（例如自己重训的）：
 
 ```bash
+# 只有自己重训过模型(model 目录里有 clf.pkl / v1.pkl)时才需要跑这个。
+# 仓库里发布的 ckpt/ 已经带好了 fast.npz, 直接用就行, 不需要导出。
 python scripts/export_fast.py ckpt/detector_zh_final          # 单特征 TF-IDF+LR
 python scripts/export_fast.py ckpt/detector_en_v5 --dual      # 双特征 TF-IDF+LR
 python scripts/export_fast.py ckpt/detector_tier0 --nb        # Hashing+NB 轻量档

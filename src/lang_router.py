@@ -1,3 +1,4 @@
+import sys
 """
 语言判断路由 - 字符级CJK占比, 毫秒级, 不需训练
 用途: 输入文本 -> 判定中文/英文 -> 路由到对应特化检测模型
@@ -30,6 +31,12 @@ def detect_lang_detail(text, cjk_threshold=0.20):
             'cjk_chars': cjk, 'latin_chars': lat, 'total': n}
 
 if __name__ == "__main__":
+    # Windows 控制台默认 cp936/cp1252, 直接 print 中文会乱码或 UnicodeEncodeError。
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     tests = [
         "这是一个中文句子，用来测试语言判断功能是否正确。",
         "This is an English sentence to test the language detection router.",

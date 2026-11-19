@@ -89,6 +89,12 @@ def humanize(text, target=0.3, max_rounds=3):
     }
 
 if __name__ == "__main__":
+    # Windows 控制台默认 cp936/cp1252, 直接 print 中文会乱码或 UnicodeEncodeError。
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     backend = find_backend()
     if not backend:
         print("错误: 没有可用的 LLM 后端")

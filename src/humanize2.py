@@ -354,6 +354,12 @@ def humanize_v2(text, strength=1.0, lang=None):
     return result
 
 if __name__ == "__main__":
+    # Windows 控制台默认 cp936/cp1252, 直接 print 中文会乱码或 UnicodeEncodeError。
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     if len(sys.argv) < 2:
         print("用法: python humanize2.py \"文本\""); sys.exit(1)
     print(humanize_v2(sys.argv[1]))

@@ -167,5 +167,11 @@ with gr.Blocks(title="AIGC 检测器") as demo:
         """)
 
 if __name__ == "__main__":
+    # Windows 控制台默认 cp936/cp1252, 直接 print 中文会乱码或 UnicodeEncodeError。
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     print("启动 Gradio: http://127.0.0.1:7860")
     demo.launch(server_name="127.0.0.1", server_port=7860, share=False, theme=gr.themes.Soft())

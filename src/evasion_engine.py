@@ -1,3 +1,4 @@
+import sys
 # -*- coding: utf-8 -*-
 """
 程序化降AI引擎 (零生成式AI) - 借鉴 Turnitout 三层规避原理
@@ -165,6 +166,12 @@ def humanize_programmatic(text, strength=1.0):
 
 
 if __name__ == "__main__":
+    # Windows 控制台默认 cp936/cp1252, 直接 print 中文会乱码或 UnicodeEncodeError。
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     import sys
     if len(sys.argv) < 2:
         print("用法: python evasion_engine.py \"文本\""); sys.exit(1)

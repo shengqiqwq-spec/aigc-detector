@@ -76,6 +76,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
 if __name__ == "__main__":
+    # Windows 控制台默认 cp936/cp1252, 直接 print 中文会乱码或 UnicodeEncodeError。
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     PORT = 8000
     # 多线程服务器: 单线程 TCPServer 在并发>队列时直接拒绝连接(实测50并发失败14个)
     class ThreadedServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
