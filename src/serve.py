@@ -25,7 +25,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_response(200); self._cors(); self.end_headers()
 
     def do_GET(self):
-        if self.path == "/info":
+        # 健康检查: 容器探针/负载均衡/监控都靠它, 必须极轻量
+        if self.path in ("/health", "/healthz"):
+            body = json.dumps({"status": "ok", "service": "aigc-detector"},
+                              ensure_ascii=False).encode()
+            self.send_response(200); self._cors()
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers(); self.wfile.write(body)
+        elif self.path == "/info":
             body = json.dumps(M.detect_profile(), ensure_ascii=False).encode()
             self.send_response(200); self._cors()
             self.send_header("Content-Type","application/json")
