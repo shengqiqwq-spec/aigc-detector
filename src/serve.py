@@ -4,7 +4,7 @@
 
 用法: python src/serve.py
 然后浏览器打开 http://127.0.0.1:8000/
-（页面 HTML 内联在本文件里, 不需要额外的 demo.html）
+（页面是仓库根目录的 demo.html, 由本服务在 / 路径提供）
 """
 import sys, os, json, http.server, socketserver
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

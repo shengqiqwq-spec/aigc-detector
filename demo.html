@@ -106,7 +106,9 @@ function show(p, lang, conf){
   document.getElementById('pct').textContent = pct + '%';
   const fill = document.getElementById('fill');
   fill.style.width = pct + '%';
-  fill.textContent = pct >= 25 ? pct + '%' : '';
+  // 条内数字只在填充很窄时补: 那时条形几乎看不见, 标签行的数字要配个视觉锚点。
+  // 填充够宽(>=12%)就不重复显示 —— 标签行右上角已经有同一个数字了。
+  fill.textContent = +pct < 12 ? pct + '%' : '';
   let cls, label;
   if(p >= 0.7){ cls='high'; label='高 — 大概率是 AI 生成'; }
   else if(p >= 0.3){ cls='mid'; label='中 — 存疑，可能人机混合'; }
