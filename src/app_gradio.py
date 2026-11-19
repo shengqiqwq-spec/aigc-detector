@@ -71,15 +71,15 @@ with gr.Blocks(title="AIGC 检测器") as demo:
     gr.Markdown("""
     # 🔍 AIGC 文本检测器 & 降AI工具
 
-    完全本地运行 · 中英双语自动识别 · 多机型适配
+    完全本地运行 · 中英双语自动识别 · 四档模型自适配机器
 
-    **提示**：检测 150 字以上文本准确率最高（99%+），短句仅供参考。
+    **提示**：150 字以上最准（长文本 F1 约 0.99）。短文本各自带长度置信度标注，仅供参考。
     """)
 
     with gr.Tab("📊 文本检测"):
         with gr.Row():
             with gr.Column():
-                text_input = gr.Textbox(label="待检测文本", placeholder="粘贴要检测的文本（中文或英文）...", lines=8)
+                text_input = gr.Textbox(label="待检测文本", placeholder="粘贴要检测的文本（中文或英文）……", lines=8)
                 detect_btn = gr.Button("🔍 开始检测", variant="primary")
             with gr.Column():
                 verdict_out = gr.Markdown(label="检测结果")
@@ -95,13 +95,41 @@ with gr.Blocks(title="AIGC 检测器") as demo:
         gr.Markdown("选择改写方式：**规则改写**(零依赖,秒出,推荐) / **程序化引擎**(零幻觉,保数字) / **LLM改写**(需本地大模型,本机裸跑约50秒/段)")
         with gr.Row():
             with gr.Column():
-                hu_input = gr.Textbox(label="待改写文本", lines=8)
+                hu_input = gr.Textbox(label="待改写文本", lines=10)
                 method = gr.Radio(choices=["规则改写（零依赖，推荐）", "程序化引擎（零幻觉）", "LLM改写（需本地大模型，慢）"],
                                   value="规则改写（零依赖，推荐）", label="改写方式")
                 hu_btn = gr.Button("✍️ 开始改写", variant="primary")
             with gr.Column():
-                hu_output = gr.Textbox(label="改写结果", lines=8)
-        hu_btn.click(humanize_fn, inputs=[hu_input, method], outputs=[hu_output])
+                hu_output = gr.Textbox(label="改写结果", lines=10)
+        # 改写前后对比: 用户真正想知道的是"有没有起作用", 光给文本不够
+        hu_compare = gr.Markdown()
+
+        def _humanize_with_check(text, method):
+            out = humanize_fn(text, method)
+            if not text or not text.strip():
+                return out, ""
+            if isinstance(out, str) and out.startswith(("LLM 服务未启动", "未知改写方式")):
+                return out, f"⚠️ {out.splitlines()[0]}"
+            try:
+                import model_zoo as _M
+                before = _M.detect(text)
+                after = _M.detect(out)
+                pb, pa = before["ai_probability"], after["ai_probability"]
+                arrow = "⬇️" if pa < pb else ("⬆️" if pa > pb else "➡️")
+                verdict = "已降到判定线以下 ✅" if pa < 0.5 <= pb else (
+                    "仍在判定线以上 ⚠️" if pa >= 0.5 else "本来就在判定线以下")
+                note = ""
+                if pb - pa < 0.05 and pb >= 0.5:
+                    note = "\n\n> 降幅很小。这类文本的 AI 特征散布在大量普通词汇上，" \
+                           "规则改写只能改写法、改不了内容 —— 需要 LLM 重写。"
+                cmp_md = (f"**改写前** {pb:.1%} → **改写后** {pa:.1%}  {arrow}  "
+                          f"（降幅 {pb-pa:+.1%}）\n\n{verdict}{note}")
+                return out, cmp_md
+            except Exception as e:
+                return out, f"（对比分数失败：{e}）"
+
+        hu_btn.click(_humanize_with_check, inputs=[hu_input, method],
+                     outputs=[hu_output, hu_compare])
 
     with gr.Tab("ℹ️ 关于"):
         gr.Markdown("""
@@ -109,7 +137,7 @@ with gr.Blocks(title="AIGC 检测器") as demo:
 
         | 档位 | 语言 | F1 | 体积 | 说明 |
         |---|---|---|---|---|
-        | tier1 | 中文 | 0.9802 | 13MB | 默认 |
+        | tier1 | 中文 | 0.9797 | 13MB | 默认 |
         | en | 英文 | 0.9905 | 12MB | 英文默认 |
         | tier3 | 中文 | 0.9709 | 1.9MB | 需 torch, 0.5ms |
         | tier0 | 中文 | 0.9144 | 4.2MB | 手机/嵌入式 |
