@@ -160,5 +160,51 @@ class TestReports:
         assert r["f1"] > 0.9
 
 
+
+
+# ---------- 改写质量回归测试 ----------
+class TestHumanizeQuality:
+    """这些是针对已修复bug的回归测试, 防止退化"""
+
+    def test_no_word_splitting(self):
+        """虚词不能插进词中间 (曾产出"碰大概到过"这类病句)"""
+        from humanize2 import humanize_v2
+        txt = "首先，人工智能技术正在深刻改变各行各业。其次，在医疗领域，AI辅助诊断能提高效率。"
+        for _ in range(15):
+            out = humanize_v2(txt, strength=1.0)
+            # 常见词必须完整
+            for w in ["人工智能", "改变", "医疗", "辅助诊断"]:
+                assert w in out, f"词被破坏: {w} 不在 {out[:80]}"
+
+    def test_english_token_preserved(self):
+        """AI 这类英文缩写不能被中文虚词劈开"""
+        from humanize2 import humanize_v2
+        txt = "首先，在医疗领域，AI辅助诊断能提高效率；在教育领域能因材施教。"
+        for _ in range(20):
+            out = humanize_v2(txt, strength=1.0)
+            assert "AI" in out, f"AI被劈开: {out[:100]}"
+
+    def test_no_excessive_filler(self):
+        """不能一句塞多个口语词变成结巴"""
+        from humanize2 import humanize_v2
+        txt = "人工智能技术正在深刻改变各行各业。在医疗领域AI能提高效率。需要建立监管框架。"
+        for _ in range(10):
+            out = humanize_v2(txt, strength=1.0)
+            # 统计口语标记数量
+            markers = sum(out.count(m) for m in ["反正", "话说回来", "还有就是", "对了", "说实话", "好像", "大概"])
+            assert markers <= 3, f"口语词过多({markers}个): {out[:100]}"
+
+    def test_humanize_reduces_score(self):
+        """改写后AI概率应显著下降"""
+        from humanize2 import humanize_v2
+        txt = "首先，人工智能技术正在深刻改变各行各业。其次，在医疗领域，AI辅助诊断能提高效率；在教育领域，个性化学习系统能因材施教。总的来说，需要建立完善的监管框架。"
+        before = M.detect(txt)["ai_probability"]
+        drops = []
+        for _ in range(5):
+            after = M.detect(humanize_v2(txt, strength=1.5))["ai_probability"]
+            drops.append(before - after)
+        assert max(drops) > 0.1, f"改写没有效果: 最大降幅{max(drops):.3f}"
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

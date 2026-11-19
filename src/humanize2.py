@@ -34,6 +34,9 @@ def split_sentences(text):
 def humanize_v2(text, strength=1.0):
     sents = split_sentences(text)
     out = []
+    injected = 0
+    # 总注入上限: 每 3 句最多 1 处, 防止通篇塞满口语词
+    max_inject = max(1, len(sents) // 3)
     for i, s in enumerate(sents):
         if not s: continue
         # 套话替换(保留v1核心)
@@ -49,15 +52,27 @@ def humanize_v2(text, strength=1.0):
             (r"具有重要意义", "挺重要的"),
         ]:
             s = re.sub(pat, rep, s)
-        # 注入主观前缀(每隔几句)
-        if strength > 0 and i % 3 == 0 and len(s) > 15:
-            s = random.choice(SUBJ_PREFIX) + "，" + s[0].lower() + s[1:] if s[0].isupper() else random.choice(SUBJ_PREFIX) + "，" + s
-        # 注入口语连接/语气
-        if i > 0 and random.random() < 0.5 * strength:
-            s = random.choice(CONNECT) + "，" + s
-        if random.random() < 0.3 * strength and len(s) > 20:
-            pos = random.randint(5, len(s)//2)
-            s = s[:pos] + random.choice(HEDGE) + s[pos:]
+        # 每句最多注入一处口语标记, 三选一 (叠加会变结巴, 必须互斥)
+        roll = random.random()
+        if strength > 0 and len(s) > 12 and injected < max_inject:
+            if i > 0 and roll < 0.30 * strength:
+                # 句首连接词
+                s = random.choice(CONNECT) + "，" + s
+                injected += 1
+            elif i % 4 == 0 and roll < 0.50 * strength:
+                # 句首主观前缀
+                s = random.choice(SUBJ_PREFIX) + "，" + s
+                injected += 1
+            elif roll < 0.62 * strength:
+                # 句中虚词: 只在标点边界插入, 绝不插进词中间
+                cands = [m.start() for m in re.finditer(r"[，、；：]", s)]
+                # 过滤: 插入点后面不能紧跟英文字母(否则会把 AI 这类缩写劈开)
+                safe = [p for p in cands
+                        if p + 1 >= len(s) or not s[p + 1].isascii() or not s[p + 1].isalnum()]
+                if safe:
+                    pos = random.choice(safe)
+                    s = s[:pos + 1] + random.choice(HEDGE) + "，" + s[pos + 1:]
+                    injected += 1
         out.append(s)
     result = "".join(out)
     # 粘连段落

@@ -19,7 +19,6 @@ AIGC 检测器 - 统一模型矩阵框架
 import sys, os, json, time, platform
 import joblib
 
-BASE = r"D:\ai_train\ckpt"
 # 自动定位项目根目录(兼容任意部署路径)
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _PROJ = os.path.dirname(_HERE) if os.path.basename(_HERE) == "src" else _HERE
@@ -218,7 +217,6 @@ def bucket(p):
 def detect(text, tier="auto"):
     lang = "zh"
     try:
-        sys.path.insert(0, r"D:\ai_train")
         from lang_router import detect_lang_detail
         lang = detect_lang_detail(text)["lang"]
     except Exception:
