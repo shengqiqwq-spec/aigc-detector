@@ -283,6 +283,48 @@ class TestProfileWithoutPsutil:
         assert 1 <= p["cores"] <= real, f"核数 {p['cores']} 超出系统实际 {real}"
 
 
+class TestRepetitionGuardPrecision:
+    """重复检测要分清「垃圾重复」和「复制粘贴失误」
+
+    实测发现: 5 段真实文章复制两遍, repeat_ratio 也是 0.999,
+    但那是常见的手滑, 不是垃圾输入 —— 之前的判定会直接拒绝它,
+    用户贴一篇正常报告却被说「内容重复度过高」。
+    """
+
+    PARAS = [
+        "人工智能技术正在深刻改变医疗行业的面貌。影像辅助诊断系统已经能够识别肺部结节、"
+        "乳腺病变等多种病灶，其准确率在部分任务上超过了初级放射科医生。",
+        "教育领域的变化同样显著。个性化学习平台通过分析学生的答题记录，定位知识薄弱点，"
+        "动态调整练习难度。相比传统的一刀切教学，这种方式让每个学生都能按照自己的节奏前进。",
+        "交通领域的应用更加直观。智能信号灯控制系统根据实时车流调整配时，在高峰时段能显著"
+        "缓解拥堵。自动驾驶技术虽然尚未完全成熟，但在园区、港口等封闭场景已经实现商业化运营。",
+    ]
+
+    def test_article_repeated_twice_is_not_rejected(self):
+        """整篇复制两遍应该照常检测"""
+        import model_zoo as M
+        t = "\n".join(self.PARAS * 2)
+        d = M.detect(t)
+        assert d.get("error") != "repetitive_content", \
+            "正常文章复制两遍被误判为重复内容"
+
+    def test_same_sentence_many_times_is_rejected(self):
+        import model_zoo as M
+        assert M.detect("这是一段测试文本。" * 100).get("error") == "repetitive_content"
+
+    def test_same_sentence_many_times_english(self):
+        """英文句号后跟空格才算断句, 不能因为按中文标点切分而漏掉"""
+        import model_zoo as M
+        assert M.detect("This is a test sentence. " * 50).get("error") == "repetitive_content"
+
+    def test_content_diversity_metric(self):
+        import model_zoo as M
+        # 同一句重复: 多样性接近 0
+        assert M._content_diversity("这是一段测试文本。" * 50) < 0.1
+        # 不同内容: 多样性接近 1
+        assert M._content_diversity("\n".join(self.PARAS)) > 0.9
+
+
 class TestFormalRegister:
     """公文改写不能毁语域
 

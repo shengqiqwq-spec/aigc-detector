@@ -349,11 +349,15 @@ def _reject_reason(t):
 
 
 def _repeat_ratio(t):
-    """最长重复子串占全文的比例, 用于识别"同一句复制很多遍"的输入"""
+    """最长重复子串占全文的比例, 用于识别"同一句复制很多遍"的输入
+
+    注意这个指标单独用会误伤: 一篇文章如果把 5 个段落复制两遍,
+    ratio 也是 0.999, 但它不是垃圾 —— 那是常见的复制粘贴失误。
+    所以 detect() 里还要看"这段内容本身有没有多样性"。
+    """
     if len(t) < 40:
         return 0.0
     best = 0
-    # 试几个长度档, 找是否存在大段重复
     for span in (len(t)//8, len(t)//4, len(t)//2):
         if span < 20:
             continue
@@ -362,6 +366,23 @@ def _repeat_ratio(t):
         if cnt > 1:
             best = max(best, min(1.0, span * cnt / len(t)))
     return best
+
+
+def _content_diversity(t):
+    """不同句子的数量 / 句子总数
+
+    用来区分两种"高重复":
+      同一句复制 100 遍   -> diversity ≈ 0
+      5 段文章复制 2 遍    -> diversity ≈ 0.5 (有 5 种不同内容)
+    后者是复制粘贴失误, 不是垃圾输入, 应该照常检测。
+    """
+    import re as _re
+    # 英文句号后跟空格才算断句, 否则 "3.14" 会被切开
+    parts = _re.split(r"[。！？；\n]+|(?<=[.!?;])\s+", t)
+    sents = [x.strip() for x in parts if len(x.strip()) >= 8]
+    if not sents:
+        return 1.0
+    return len(set(sents)) / len(sents)
 
 
 def detect(text, tier="auto"):
@@ -388,9 +409,12 @@ def detect(text, tier="auto"):
                 "text_len": len(text), "latency_ms": 0.0,
                 "profile": "skipped", "error": "not_natural_language"}
 
-    # 重复文本拒绝: "这是一段测试文本。" * 500 会被判成高 AI, 但那不是写作风格
+    # 重复文本拒绝: "这是一段测试文本。" * 500 会被判成高 AI, 但那不是写作风格。
+    # 必须同时看内容多样性: 一篇文章把 5 个段落复制两遍, ratio 也接近 1,
+    # 但那是复制粘贴失误而不是垃圾输入, 应该照常检测。
     rep = _repeat_ratio(stripped)
-    if rep > 0.5 and len(stripped) > 200:
+    div = _content_diversity(stripped)
+    if rep > 0.5 and div < 0.15 and len(stripped) > 200:
         return {"language": "unknown", "tier": tier, "ai_probability": 0.0,
                 "bucket": "低", "confidence": f"重复内容占比 {rep:.0%}，无法判断写作风格",
                 "text_len": len(text), "latency_ms": 0.0,
