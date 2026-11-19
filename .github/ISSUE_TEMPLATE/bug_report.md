@@ -7,8 +7,9 @@ labels: bug
 
 **环境**
 - 系统: (Windows 11 / macOS / Ubuntu)
-- Python: (3.9 / 3.11)
+- Python: (3.11 / 3.13 / 3.14)
 - 是否安装 torch: (是/否)
+- numpy 版本: (运行 `python -c "import numpy; print(numpy.__version__)"`)
 
 **复现步骤**
 1.

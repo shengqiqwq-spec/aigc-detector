@@ -53,7 +53,7 @@ git push origin feat/your-feature
 
 ### 📝 代码规范
 
-- **Python 3.9+**，遵循 PEP 8
+- **Python 3.11+**，遵循 PEP 8（CI 覆盖 3.11 / 3.13 / 3.14）
 - 新增功能**必须**带测试
 - 保持零可选依赖的原则（核心功能只用 sklearn）
 - 中文注释优先（项目主要面向中文用户）
@@ -117,7 +117,7 @@ git push origin feat/your-feature
 
 ### 📝 Code Style
 
-- **Python 3.9+**, PEP 8
+- **Python 3.11+**, PEP 8 (CI covers 3.11 / 3.13 / 3.14)
 - New features **must** have tests
 - Keep core dependency-free (only sklearn for detect)
 - Chinese comments preferred (primary audience)
