@@ -105,7 +105,7 @@ for t in topics:
     for s in styles: tasks.append((t,s))
 random.seed(); random.shuffle(tasks)
 
-print(f"加载模型 (GPU)...", flush=True)
+print("加载模型 (GPU)...", flush=True)
 pipe = ovg.LLMPipeline(MODEL, "GPU")
 cfg = pipe.get_generation_config()
 cfg.max_new_tokens = 320
@@ -122,7 +122,7 @@ with open(OUT,"a",encoding="utf-8") as f:
         tried+=1
         try:
             raw = pipe.generate(style.format(topic=topic), cfg)
-        except Exception as e:
+        except Exception:
             continue
         txt = clean(str(raw))
         if isbad(txt): continue

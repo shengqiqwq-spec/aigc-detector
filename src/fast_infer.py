@@ -18,7 +18,6 @@ sklearn 的 import 占冷启动 1200ms/1700ms, 且无论怎么切子模块都省
       由调用方回退到 sklearn 路径 (model_zoo 已内置回退)。
 """
 import os
-import json
 import numpy as np
 
 

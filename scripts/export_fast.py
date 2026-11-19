@@ -12,7 +12,6 @@ fast.npz 加载不触发 sklearn import, 冷启动 1.7s -> 0.3s。
     python scripts/export_fast.py ckpt/detector_en_v5 --dual
 """
 import os
-import sys
 import pickle
 import argparse
 import numpy as np

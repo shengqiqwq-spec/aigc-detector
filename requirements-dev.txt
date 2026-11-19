@@ -2,5 +2,8 @@
 -r requirements.txt
 pytest>=7.0
 
+# 静态检查（未使用导入、语法错误等）
+ruff>=0.5
+
 # Tier-3 CNN 测试需要 torch（可选）
 # 若无 torch，CNN 相关测试会自动跳过

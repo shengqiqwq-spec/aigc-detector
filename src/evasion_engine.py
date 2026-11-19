@@ -12,7 +12,6 @@ Layer3 语义: 同义替换保持语义不变
   - 零幻觉: 不改事实/数字/专有名词
 """
 import re, random
-from collections import defaultdict
 
 # ============ 零宽字符与AI水印清理 ============
 ZERO_WIDTH = "\u200b\u200c\u200d\u2060\ufeff\u180e\u200e\u200f"

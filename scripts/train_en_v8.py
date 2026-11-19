@@ -23,7 +23,7 @@ import joblib
 from scipy.sparse import hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import f1_score, roc_auc_score
+from sklearn.metrics import f1_score
 
 # ---- 路径: 默认用脚本所在目录, 可用环境变量覆盖 ----
 _HERE = os.path.dirname(os.path.abspath(__file__))

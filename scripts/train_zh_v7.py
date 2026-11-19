@@ -29,7 +29,6 @@ for line in open(DATA_DIR + r"\hc3_all.jsonl",encoding="utf-8"):
             xs.append(a.strip()); ys.append(1); gs.append(n)
 print(f"HC3: {n}QA -> 人={ys.count(0)} 旧AI={ys.count(1)}", flush=True)
 
-import glob
 ai_new=[]
 for fn in ["ai_zh_modern.jsonl","ai_zh_modern2.jsonl","ai_zh_short.jsonl",
            "ai_zh_styles.jsonl","ai_zh_styles2.jsonl","ai_zh_big.jsonl",

@@ -32,6 +32,9 @@ jobs:
           pip install -r requirements-dev.txt
           pip install scikit-learn scipy joblib psutil gradio
 
+      - name: Lint (unused imports, undefined names)
+        run: ruff check src scripts --select F,E9 --line-length 120
+
       - name: Run tests
         run: pytest tests/ -v
 

@@ -14,7 +14,6 @@
 import json
 import os
 import re
-import sys
 
 _D = os.environ.get("AIGC_DATA_DIR") or "data"
 SRC = os.path.join(_D, "ai_zh_blindspots.jsonl")
