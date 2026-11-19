@@ -1,61 +1,94 @@
-# 训练脚本说明
+# 训练脚本 / Training Scripts
 
-这些脚本用于复现模型的训练过程。**注意：脚本中有硬编码的 `D:\ai_train` 路径**，使用前需要改成你自己的路径。
+**所有脚本均使用相对路径**（自动定位仓库根目录下的 `data/` 和 `ckpt/`），
+clone 后即可运行，无需改代码。可用环境变量覆盖：
+
+```bash
+export AIGC_DATA_DIR=/path/to/data
+export AIGC_CKPT_DIR=/path/to/ckpt
+```
 
 ## 文件说明
 
-| 脚本 | 作用 |
-|---|---|
-| `train_zh_v6.py` | 中文检测器训练（最终版 zh_final） |
-| `train_en_v4.py` | 英文检测器训练（en_v5） |
-| `train_cnn_full.py` | CNN 极速模型训练 |
-| `augment_data.py` | 数据增强（句子级切分） |
-| `gen_zh_modern.py` | 用 Qwen 生成当代中文 AI 数据 |
-| `gen_zh_div.py` | 多样化中文 AI 生成 |
-| `gen_en_npu.py` | 英文 AI 数据生成（NPU/GPU） |
-| `clean_en_data.py` | 英文数据清洗 |
+| 脚本 | 作用 | 产出 |
+|---|---|---|
+| `train_zh_v7.py` | **中文检测器**（当前线上版本） | `ckpt/detector_zh_final/` |
+| `train_en_v7.py` | **英文检测器**（当前线上版本） | `ckpt/detector_en_v5/` |
+| `gen_ai_text.py` | 用本地 LLM 生成当代 AI 文本（中/英） | `data/ai_{zh,en}_ov.jsonl` |
+| `gen_zh_short.py` | 专门生成短文本 AI 样本 | `data/ai_zh_short2.jsonl` |
+| `augment_data.py` | HC3 句子级增强 | — |
+| `clean_en_data.py` | 英文数据清洗 | — |
+| `train_cnn_full.py` | CharTextCNN 极速档 | `ckpt/detector_cnn_full/` |
+| `gh_api_push.py` | 绕过 github.com:443 封锁的推送工具 | — |
 
-## 复现步骤
+## 复现完整流程
 
 ### 1. 准备基础数据
+
+下载 HC3 中文数据集并放到 `data/hc3_all.jsonl`：
+
 ```bash
-# 下载 HC3 中文数据集
-# https://huggingface.co/datasets/Hello-SimpleAI/HC3-Chinese
-# 放到 data/hc3_all.jsonl
+mkdir -p data
+curl -L -o data/hc3_all.jsonl \
+  https://hf-mirror.com/datasets/Hello-SimpleAI/HC3-Chinese/resolve/main/all.jsonl
 ```
 
-### 2. 数据增强
+英文对应 `HC3`（非 `HC3-Chinese`），存为 `data/hc3_en_real.jsonl`。
+
+格式为每行一个 JSON：
+
+```json
+{"question": "...", "human_answers": ["..."], "chatgpt_answers": ["..."], "source": "..."}
+```
+
+### 2. 生成当代 AI 文本（关键步骤）
+
+公共语料是 2022 年 GPT-3.5 时代的。**不补当代数据，模型对新模型完全失效**
+（实测：只用 HC3 训练时，对现代模型输出的召回接近 0）。
+
 ```bash
-python scripts/augment_data.py   # 生成 hc3_aug.jsonl
+# 需要 OpenVINO + 一个本地 LLM（示例用 Qwen2.5-1.5B int4）
+pip install openvino-genai
+python scripts/gen_ai_text.py zh 400    # 中文 400 条
+python scripts/gen_ai_text.py en 300    # 英文 300 条
+python scripts/gen_zh_short.py 500      # 短文本 500 条
 ```
 
-### 3. 生成当代 AI 数据（需要本地 LLM）
+### 3. 训练
+
 ```bash
-# 需要 OpenVINO 或 llama.cpp + Qwen 模型
-python scripts/gen_zh_modern.py
+python scripts/train_zh_v7.py
+python scripts/train_en_v7.py
 ```
 
-### 4. 训练
-```bash
-python scripts/train_zh_v6.py    # 中文
-python scripts/train_en_v4.py    # 英文
-```
+脚本会打印每档 C 值的测试集/独立集 F1，并把最优模型存到 `ckpt/`。
 
-## 修改路径
+## 训练配置（当前线上版本）
 
-在脚本开头找到：
-```python
-OUT = r"D:\ai_train\ckpt\detector_zh_final"
-DATA = r"D:\ai_train\data\hc3_aug.jsonl"
-```
-改成你自己的路径即可。
+| 项目 | 中文 | 英文 |
+|---|---|---|
+| 基础语料 | HC3-Chinese 12,853 QA | HC3-English 21,432 QA |
+| 当代 AI 补充 | 2,941 条 | 1,294 条 |
+| 特征 | char(1,5) TF-IDF, 300k 维 | char_wb(2,5) 200k + word(1,2) 100k |
+| 模型 | LogisticRegression C=12 | LogisticRegression C=10 |
+| 切分 | **按原问题分组**（防泄漏） | 同左 |
+| 独立集 F1 | **0.9804** | **0.9939** |
 
-## 训练配置（中文最终版）
+## 两个必须遵守的坑
 
-- 数据：HC3 183743 + 当代 AI 1860
-- 特征：字符 TF-IDF char(1,5), 300k 维
-- 模型：LogisticRegression C=12
-- 结果：F1=0.9933（独立测试集）
+### 1. 必须按原问题分组切分
+
+HC3 每个问题都同时有人类答案和 AI 答案。用普通 `train_test_split`
+会把同一问题的两边分到训练集和测试集，**模型学到的是话题而不是文风**。
+症状：随机切分 F1 = 0.99，分组切分后塌到 0.50（等于瞎猜）。
+
+### 2. 必须保留旧时代 AI 样本
+
+只喂当代模型生成的数据，模型会变成"某个小模型的指纹检测器"。
+实测：只用 Qwen-1.5B 数据训练后，对 HC3 的 GPT-3.5 文本召回只有 **2.8%**。
+把 HC3 自带的 `chatgpt_answers` 一并作为 AI 正样本后，回到 **99.6%**。
+
+正确做法：**AI 正类 = 语料自带的旧时代 AI + 若干不同当代模型的输出**。
 
 ## 环境
 
@@ -66,4 +99,4 @@ numpy>=1.24
 joblib>=1.3
 ```
 
-生成当代 AI 数据另需 openvino-genai 或 llama.cpp。
+生成数据另需 `openvino-genai`（或 llama.cpp + GGUF 模型）。
