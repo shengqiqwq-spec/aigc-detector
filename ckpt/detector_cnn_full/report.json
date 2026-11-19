@@ -1,7 +1,10 @@
 {
-  "f1": 0.954,
-  "params_m": 1.29,
-  "train_n": 152472,
-  "val_n": 20792,
-  "epochs": 4
+  "f1": 0.9709,
+  "params_m": 0.47,
+  "train_n": 32208,
+  "test_n": 8234,
+  "epochs": 3,
+  "ai_new": 2941,
+  "model": "CharTextCNN",
+  "split": "grouped"
 }

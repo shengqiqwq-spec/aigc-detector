@@ -109,30 +109,75 @@ def pred_tier1o(text):
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
 
 def _make_cnn_predictor(ckpt_dir):
+    """加载 CharTextCNN。兼容两种 checkpoint 格式:
+       - 旧: model.pt 是纯 state_dict + 同目录 vocab.json, 输出 2 类 softmax
+       - 新: model.pt 是 {state_dict, c2i, max_len, vocab_size} 单文件, 输出 1 logit
+    """
     import torch, torch.nn as nn
     d = os.path.join(BASE, ckpt_dir)
-    vocab = json.load(open(os.path.join(d, "vocab.json"), encoding="utf-8"))
-    c2i, MAX_LEN = vocab["c2i"], vocab["MAX_LEN"]
-    n_conv = len([k for k in torch.load(os.path.join(d, "model.pt"), map_location="cpu", weights_only=True) if k.startswith("convs.") and k.endswith(".weight")])
-    class TextCNN(nn.Module):
-        def __init__(self, v, embed=160, nk=5):
-            super().__init__()
-            self.emb = nn.Embedding(v+1, embed, padding_idx=0)
-            ks = [2,3,4,5,6][:nk]
-            self.convs = nn.ModuleList([nn.Conv1d(embed, 128, k) for k in ks])
-            self.fc = nn.Linear(128*nk, 2); self.drop = nn.Dropout(0.35)
-        def forward(self, x):
-            e = self.emb(x).transpose(1,2)
-            p = [torch.relu(c(e)).max(dim=2).values for c in self.convs]
-            return self.fc(self.drop(torch.cat(p, dim=1)))
-    m = TextCNN(len(c2i), nk=max(n_conv,1))
-    m.load_state_dict(torch.load(os.path.join(d, "model.pt"), map_location="cpu", weights_only=True))
+    ckpt = torch.load(os.path.join(d, "model.pt"), map_location="cpu", weights_only=True)
+
+    if isinstance(ckpt, dict) and "state_dict" in ckpt:
+        # 新格式
+        sd = ckpt["state_dict"]
+        c2i = ckpt["c2i"] if not isinstance(ckpt["c2i"], str) else None
+        if c2i is None:
+            import json as _j
+            c2i = _j.loads(ckpt["c2i"]) if isinstance(ckpt["c2i"], str) else ckpt["c2i"]
+        MAX_LEN = ckpt["max_len"]
+        emb_dim = sd["emb.weight"].shape[1]
+        ks = [k for k in sd if k.startswith("convs.") and k.endswith(".weight")]
+        nk = len(ks)
+        out_ch = sd["convs.0.weight"].shape[0]
+        out_dim = sd["fc.weight"].shape[0]   # 1 = 单logit, 2 = 双类
+        conv_ks = [2,3,4,5,6][:nk]
+
+        class CNN(nn.Module):
+            def __init__(self, v, embed, nk_, out_ch_, out_dim_):
+                super().__init__()
+                self.emb = nn.Embedding(v+1, embed, padding_idx=0)
+                self.convs = nn.ModuleList([nn.Conv1d(embed, out_ch_, k) for k in conv_ks])
+                self.drop = nn.Dropout(0.3)
+                self.fc = nn.Linear(out_ch_*nk_, out_dim_)
+            def forward(self, x):
+                e = self.emb(x).transpose(1,2)
+                h = [torch.relu(c(e)).max(dim=2)[0] for c in self.convs]
+                return self.fc(self.drop(torch.cat(h,1)))
+        m = CNN(len(c2i), emb_dim, nk, out_ch, out_dim)
+        m.load_state_dict(sd)
+        single_logit = (out_dim == 1)
+    else:
+        # 旧格式
+        vocab = json.load(open(os.path.join(d, "vocab.json"), encoding="utf-8"))
+        c2i, MAX_LEN = vocab["c2i"], vocab["MAX_LEN"]
+        sd = ckpt
+        emb_dim = sd["emb.weight"].shape[1]
+        nk = len([k for k in sd if k.startswith("convs.") and k.endswith(".weight")])
+        out_ch = sd["convs.0.weight"].shape[0]
+        conv_ks = [2,3,4,5,6][:nk]
+        class TextCNN(nn.Module):
+            def __init__(self, v, embed, nk_):
+                super().__init__()
+                self.emb = nn.Embedding(v+1, embed, padding_idx=0)
+                self.convs = nn.ModuleList([nn.Conv1d(embed, out_ch, k) for k in conv_ks])
+                self.fc = nn.Linear(out_ch*nk_, 2); self.drop = nn.Dropout(0.35)
+            def forward(self, x):
+                e = self.emb(x).transpose(1,2)
+                p = [torch.relu(c(e)).max(dim=2).values for c in self.convs]
+                return self.fc(self.drop(torch.cat(p, dim=1)))
+        m = TextCNN(len(c2i), emb_dim, nk)
+        m.load_state_dict(sd)
+        single_logit = False
+
     m.eval()
     def _pred(text):
         ids = [c2i.get(c, 0) for c in text[:MAX_LEN]]
         ids += [0]*(MAX_LEN-len(ids))
         with torch.no_grad():
-            return float(torch.softmax(m(torch.tensor([ids])), dim=1)[0, 1].item())
+            out = m(torch.tensor([ids]))
+            if single_logit:
+                return float(torch.sigmoid(out)[0].item())
+            return float(torch.softmax(out, dim=1)[0, 1].item())
     return _pred
 
 def pred_tier3(text):
