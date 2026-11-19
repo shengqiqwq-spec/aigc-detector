@@ -383,11 +383,11 @@ Measured on data the model **never saw during training**:
 
 | Test set | N | Result |
 |---|---|---|
-| Chinese human text | 500 | **0.0% false positive** (mean 0.012) |
+| Chinese human text | 500 | **0.4% false positive** (2/500, mean 0.040) |
 | Chinese GPT-3.5 | 500 | **99.6% flagged** (mean 0.967) |
 | Chinese Qwen-1.5B (modern) | 80 | **100% flagged** (mean 0.969) |
 | Chinese Qwen3-VL-30B (cross-model) | 23 | **95.7% flagged** (mean 0.867) |
-| English human text | 506 | **99.8% correct** (mean 0.010) |
+| English human text | 497 | **90.9% correct** (9.1% false positive, mean 0.085) |
 | English GPT-3.5 | 294 | **100% flagged** (mean 0.986) |
 | English Qwen-1.5B (modern) | 56 | **100% flagged** (mean 0.953) |
 
@@ -407,12 +407,21 @@ so it learned general AI-writing features rather than one model's fingerprint.
 
 ---
 
+> **On English false positives.** 9% of genuine human English text scores above
+> 0.5. Inspecting them, they are answers written in textbook style - clear
+> structure, dense terminology, step-by-step logic. That is exactly what AI
+> writing looks like, so idiomatic technical prose gets caught. Written
+> casually, the same content scores low (0.26 vs 0.88 for the same microwave
+> explanation). The detector measures register, not authorship. Chinese does
+> not show this because HC3's Chinese answers are conversational.
+
 ## 🧪 Benchmarks
 
 | Test | Result |
 |---|---|
 | Real Qwen AI texts (75) | **100% flagged High**, avg 0.985 |
-| Human texts (50) | **0% false positive**, avg 0.019 |
+| Chinese human texts (500) | **0.4% false positive**, avg 0.040 |
+| English human texts (497) | **9.1% false positive**, avg 0.085 |
 | Cross-domain (7 domains, 420) | 100% in every domain |
 | Long text (>200 chars) | **F1 = 0.9899** |
 
