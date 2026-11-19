@@ -149,7 +149,9 @@ class TestReports:
         with open(p, encoding="utf-8") as f:
             r = json.load(f)
         assert r["f1"] > 0.9
-        assert r["total"] > 100000
+        # v7 报告用 train_n/ind_n (分组防泄漏切分)
+        assert r.get("train_n", 0) > 10000
+        assert r.get("ind_n", 0) > 3000
 
     def test_en_report_metrics(self):
         p = os.path.join(M.BASE, "detector_en_v5", "report.json")

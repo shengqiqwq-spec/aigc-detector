@@ -56,7 +56,7 @@ def _load_joblib(*parts):
     return _CACHE[key]
 
 def pred_tier1(text):
-    d = os.path.join(BASE, "detector_zh_final")        # 最终版: F1=0.9933, 1063条当代数据
+    d = os.path.join(BASE, "detector_zh_final")        # v7: F1=0.9812(分组防泄漏), 2146条当代数据
     vec = _load_joblib(d, "tfidf.joblib")
     clf = _load_joblib(d, "clf.joblib")
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
@@ -150,11 +150,19 @@ def pred_tier2_light(text):
     return float(clf.predict_proba(F)[0, 1])
 
 def pred_en(text):
-    """英文检测器v4: 491条当代Qwen生成数据训练, 泛化良好"""
+    """英文检测器 v7: 分组防泄漏切分 F1=0.9917, char_wb+word 双特征"""
     d = os.path.join(BASE, "detector_en_v5")
-    vec = _load_joblib(d, "tfidf.joblib")
     clf = _load_joblib(d, "clf.joblib")
-    return float(clf.predict_proba(vec.transform([text]))[0, 1])
+    # 双特征模型 (v1=char_wb, v2=word); 回退兼容单特征旧模型
+    try:
+        v1 = _load_joblib(d, "v1.joblib")
+        v2 = _load_joblib(d, "v2.joblib")
+        from scipy.sparse import hstack
+        X = hstack([v1.transform([text]), v2.transform([text])])
+    except Exception:
+        vec = _load_joblib(d, "tfidf.joblib")
+        X = vec.transform([text])
+    return float(clf.predict_proba(X)[0, 1])
 
 # 扩展档位 (已清理失效档位: tier1o/tier2/tier3o 对应模型已删除)
 _ALL_PREDICTORS = dict(PREDICTORS)
