@@ -225,14 +225,17 @@ def humanize_v2(text, strength=1.0, lang=None):
             n_target = max(1, min(len(sents), int(round(strength))))
             order = sorted(range(len(sents)), key=lambda k: -len(sents[k]))
             used = 0
+            # 不重复用同一个括注: 连着插两个"（按现行规定执行）"一眼就假
+            pool = list(parens)
+            random.shuffle(pool)
             for _i in order:
-                if used >= n_target:
+                if used >= n_target or not pool:
                     break
                 _s = sents[_i]
                 body = _s.rstrip("。！？；!?;.")
                 end = _s[len(body):] or "。"
                 if len(body) > 12:
-                    sents[_i] = body + random.choice(parens) + end
+                    sents[_i] = body + pool.pop() + end
                     used += 1
             injected_forced = used
         # 强制插过的要占用注入配额, 否则随机分支会再插一个 → 双括注
