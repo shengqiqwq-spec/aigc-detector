@@ -1,18 +1,34 @@
 # -*- coding: utf-8 -*-
 """
-降AI工具 (14B正式版) - 检测→改写→再检测 自动迭代
-需要: llama-server + Qwen3-14B 运行在 127.0.0.1:8089
+降AI工具 (LLM 版) - 检测→改写→再检测 自动迭代
+
+需要本地 llama-server。效果与模型大小强相关 (实测):
+  - Qwen3-14B Q4:  单轮可把 0.89 降到 0.18, 但本机 ~0.7 tok/s, 一段话要 50s+
+  - Qwen2.5-1.5B:  1.4s 出结果, 但改写力度不足, 有时反而升分
+
+因此: 没有大模型时请用 humanize2.py (规则改写) 或 evasion_engine.py
+(程序化引擎), 两者零依赖且已修好。本脚本适合有 GPU/大显存的机器。
+
+后端端口按顺序探测: 8089 → 8090 → 8091
 
 用法:
-  python humanize_pro.py "文本"
-  python humanize_pro.py "文本" --target 0.3
-  python humanize_pro.py --batch in.txt out.txt
+  python src/humanize_pro.py "文本"
+  python src/humanize_pro.py "文本" --target 0.3
+  python src/humanize_pro.py --batch in.txt out.txt
 """
 import sys, os, json, urllib.request
-sys.path.insert(0, r"D:\ai_train\src")
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)
 import model_zoo as M
 
-API = "http://127.0.0.1:8089/v1/chat/completions"
+# 支持多个 LLM 后端, 按顺序探测第一个可用的
+BACKENDS = [
+    ("http://127.0.0.1:8089", "llama-server #1"),
+    ("http://127.0.0.1:8090", "llama-server #2"),
+    ("http://127.0.0.1:8091", "llama-server #3"),
+]
+_API_BASE = None
+API = None
 
 SYS_BASE = ("把下面的AI生成文字改写成普通人自然说话的口语，保留全部原意，"
             "用短句、口语词、语气词，去掉书面套话和结构化表达。只输出改写后的文字，不要解释。")
@@ -23,21 +39,35 @@ def detect_prob(text):
     return M._ALL_PREDICTORS["tier1"](text)
 
 def rewrite(text, strong=False):
+    if not find_backend():
+        raise RuntimeError("没有可用的 LLM 后端 (需要 llama-server)")
     data = json.dumps({"model":"local","messages":[
         {"role":"system","content": SYS_STRONG if strong else SYS_BASE},
         {"role":"user","content": text}],
-        "max_tokens":500,"temperature":0.88}).encode()
+        "max_tokens":800,"temperature":0.88}).encode()
     req = urllib.request.Request(API, data=data, headers={"Content-Type":"application/json"})
-    with urllib.request.urlopen(req, timeout=240) as r:
+    with urllib.request.urlopen(req, timeout=600) as r:
         out = json.loads(r.read())["choices"][0]["message"]["content"].strip()
     return out.split("改写：")[-1].split("---")[-1].strip()
 
+def find_backend():
+    """探测可用的 LLM 后端, 返回 (base_url, name) 或 None"""
+    global _API_BASE, API
+    if _API_BASE:
+        return (_API_BASE, "cached")
+    for base, name in BACKENDS:
+        try:
+            with urllib.request.urlopen(base + "/health", timeout=2) as r:
+                if json.loads(r.read()).get("status") == "ok":
+                    _API_BASE = base
+                    API = base + "/v1/chat/completions"
+                    return (base, name)
+        except Exception:
+            continue
+    return None
+
 def server_ok():
-    try:
-        with urllib.request.urlopen("http://127.0.0.1:8089/health", timeout=5) as r:
-            return json.loads(r.read()).get("status")=="ok"
-    except Exception:
-        return False
+    return find_backend() is not None
 
 def humanize(text, target=0.3, max_rounds=3):
     history = [{"round":0, "prob":detect_prob(text), "text":text}]
@@ -59,10 +89,14 @@ def humanize(text, target=0.3, max_rounds=3):
     }
 
 if __name__ == "__main__":
-    if not server_ok():
-        print("错误: llama-server 未运行")
-        print("启动: cd /d/llm/llama.cpp/b11642 && ./llama-server.exe -m D:/models/Qwen_Qwen3-14B-Q4_K_M.gguf --port 8089 -ngl 99")
+    backend = find_backend()
+    if not backend:
+        print("错误: 没有可用的 LLM 后端")
+        print("需要先启动 llama-server, 例如:")
+        print("  llama-server -m <模型.gguf> --port 8089 -ngl 99")
+        print("支持的端口: 8089 / 8090 / 8091")
         sys.exit(1)
+    print(f"使用后端: {backend[1]} ({backend[0]})", file=sys.stderr)
     args = sys.argv[1:]
     if not args:
         print("用法: python humanize_pro.py \"文本\" [--target 0.3]"); sys.exit(1)

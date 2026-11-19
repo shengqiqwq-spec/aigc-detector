@@ -89,12 +89,12 @@ with gr.Blocks(title="AIGC 检测器") as demo:
         ], inputs=[text_input], label="示例")
 
     with gr.Tab("🛠 降AI改写"):
-        gr.Markdown("选择改写方式：规则改写(零依赖) / 程序化引擎(零幻觉) / LLM改写(最强,需14B)")
+        gr.Markdown("选择改写方式：**规则改写**(零依赖,秒出,推荐) / **程序化引擎**(零幻觉,保数字) / **LLM改写**(需本地大模型,本机裸跑约50秒/段)")
         with gr.Row():
             with gr.Column():
                 hu_input = gr.Textbox(label="待改写文本", lines=8)
-                method = gr.Radio(choices=["规则改写（零依赖）", "程序化引擎（零幻觉）", "LLM改写（需14B服务）"],
-                                  value="规则改写（零依赖）", label="改写方式")
+                method = gr.Radio(choices=["规则改写（零依赖，推荐）", "程序化引擎（零幻觉）", "LLM改写（需本地大模型，慢）"],
+                                  value="规则改写（零依赖，推荐）", label="改写方式")
                 hu_btn = gr.Button("✍️ 开始改写", variant="primary")
             with gr.Column():
                 hu_output = gr.Textbox(label="改写结果", lines=8)
