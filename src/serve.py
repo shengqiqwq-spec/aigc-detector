@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-本地检测API服务 - 纯标准库, 零依赖
+本地检测 API 服务 - 纯标准库, 零依赖
+
 用法: python src/serve.py
-然后浏览器打开 demo.html
+然后浏览器打开 http://127.0.0.1:8000/
+（页面 HTML 内联在本文件里, 不需要额外的 demo.html）
 """
 import sys, os, json, http.server, socketserver
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
