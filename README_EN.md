@@ -154,6 +154,65 @@ aigc-detector/
 
 ---
 
+## ❓ FAQ
+
+### Port already in use / page won't open
+
+```bash
+# Windows: find who holds 8000
+netstat -ano | findstr :8000
+taskkill /F /PID <PID>
+```
+To use another port, change `PORT = 8000` at the end of `src/serve.py`.
+
+### `ModuleNotFoundError: No module named 'torch'`
+
+Only `tier3` (the CNN tier) needs torch. The default `tier1` / `en` do not,
+and they are more accurate. Either `pip install torch`, or just use the default.
+
+### The first detection takes ~2 seconds
+
+That is Python importing sklearn/scipy, not the model. The server already
+calls `warm_up()` at startup. In your own script:
+
+```python
+import model_zoo as M
+M.warm_up()          # afterwards each detect() takes 1-2 ms
+```
+
+### Short text gives jumpy results
+
+Under 40 characters there is not enough signal, so the probability is
+deliberately shrunk toward 0.5 ("Medium") rather than reported with false
+confidence. Use 150+ characters, or test several passages.
+
+### Results disagree with Turnitin / GPTZero
+
+Expected. This is an independent model evaluated by grouped-split F1 on its
+own gold set - it does not attempt to reproduce any commercial detector's
+percentage. "High" is not an accusation and "Low" is not a clearance.
+
+### A Chinese document that is definitely AI-written scores Low
+
+Two likely causes:
+
+1. **It was written by someone who knows the detector** and avoided every AI
+   language habit. Any statistical detector misses this.
+2. **Unusual register** - technical notes and code comments are thin in the
+   training data.
+
+### Other languages?
+
+Chinese and English only, auto-routed by CJK character ratio. Other languages
+fall through to the Chinese model and the result is not meaningful.
+
+### Commercial use?
+
+Code is Apache 2.0. Training used [HC3](https://huggingface.co/datasets/Hello-SimpleAI/HC3)
+(CC BY-SA 4.0) - check that dataset's terms before commercial use.
+
+---
+
 ## 🧪 Testing
 
 ```bash
