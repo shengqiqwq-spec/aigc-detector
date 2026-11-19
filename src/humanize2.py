@@ -310,6 +310,32 @@ def humanize_v2(text, strength=1.0, lang=None):
         result = re.sub(r"(^|[.!?]\s+)([a-z])",
                         lambda m: m.group(1) + m.group(2).upper(), result)
         result = result.lstrip()
+
+    # 兜底: 绝不能原样返回。
+    # 短文本(单句、无套话)常常所有随机分支都不触发, 用户点"改写"拿到一模一样的
+    # 东西, 会认为功能坏了 —— 实测 26 字公文有 44% 概率返回原文。
+    # 那时做一次确定性的最小改动: 句中标点处插入口语标记(中文)/
+    # 前置一个主观限定(英文)。改动幅度小, 但保证"确实动手了"。
+    if result == text.strip():
+        sents = split_sentences(result)
+        if sents:
+            s = sents[0]
+            body = s.rstrip("。！？；!?;.")
+            end = s[len(body):]
+            if len(body) > 8:
+                if lang == "zh":
+                    pos = _safe_insert_pos(body, "，；")
+                    if pos:
+                        k = pos[len(pos) // 2]
+                        s = body[: k + 1] + random.choice(HEDGE) + "，" + body[k + 1:].lstrip() + end
+                        result = s + "".join(sents[1:])
+                    else:
+                        result = body + "，说真的" + (end or "。") + "".join(sents[1:])
+                else:
+                    low = body[0].lower() + body[1:] if body else body
+                    result = random.choice(EN_HEDGE).capitalize() + ", " + low + (end or ".") \
+                             + "".join(sents[1:])
+
     return result
 
 if __name__ == "__main__":

@@ -97,6 +97,37 @@ class TestHumanizeFn:
             app_gradio.humanize_fn(self.AI_TEXT, "不存在的改写方式")
 
 
+class TestNeverEchoesInput:
+    """改写器绝不能原样返回
+
+    CI 在 ubuntu 3.11 上抓到: 26 字的短公文有 44% 概率原样返回。
+    套话规则不命中、句子太短无法注入、随机 roll 不触发 —— 三条都不占,
+    用户点"改写"拿到一模一样的东西, 会认为功能坏了。
+
+    这条测试故意跑多次, 因为原 bug 是概率性的。
+    """
+
+    CASES = [
+        "各部门：为提升员工素质，经研究决定开展年度培训计划。",
+        "人工智能正在改变世界。",
+        "The meeting is scheduled for Tuesday.",
+        "各部门：为提升全体员工的专业技能与综合素质，经研究决定开展年度员工培训计划。"
+        "现将有关事项通知如下：请各部门高度重视，认真组织实施。",
+    ]
+
+    def test_never_returns_input_unchanged(self):
+        for text in self.CASES:
+            for _ in range(20):
+                out = app_gradio.humanize_fn(text, "规则改写（零依赖，推荐）")
+                assert out != text, f"原样返回: {text!r}"
+
+    def test_short_text_still_gets_modified(self):
+        """单句、无套话的短文本是最容易漏的"""
+        short = "人工智能正在改变世界。"
+        for _ in range(20):
+            assert app_gradio.humanize_fn(short, "规则改写（零依赖，推荐）") != short
+
+
 class TestRadioChoicesMatchDispatch:
     """下拉框的每个选项都必须能走到对应的改写实现
 
