@@ -383,13 +383,28 @@ Measured on data the model **never saw during training**:
 
 | Test set | N | Result |
 |---|---|---|
-| Chinese human text | 500 | **0.4% false positive** (2/500, mean 0.040) |
+| Chinese human text | 2500 | **0.52% false positive** (13/2500) |
 | Chinese GPT-3.5 | 500 | **99.6% flagged** (mean 0.967) |
 | Chinese Qwen-1.5B (modern) | 80 | **100% flagged** (mean 0.969) |
 | Chinese Qwen3-VL-30B (cross-model) | 23 | **95.7% flagged** (mean 0.867) |
-| English human text | 497 | **100% correct** (0 false positive; was 9.1% before v8) |
+| English human text | 2500 | **0.56% false positive** (14/2500; down from 9.1% before v8) |
 | English GPT-3.5 | 294 | **100% flagged** (mean 0.986) |
 | English Qwen-1.5B (modern) | 56 | **100% flagged** (mean 0.953) |
+
+Recall is not uniform across registers when measured on a larger, unfiltered
+sample. Chinese AI text, 720 passages from six sources: **94.2%**. Broken down:
+
+| Source | Recall |
+|---|---|
+| Modern essays | 100% (200/200) |
+| Short text | 100% (134/134) |
+| Mixed registers (memo/email/minutes) | 95.2% (159/167) |
+| Practical guides | 91.3% (84/92) |
+| Marketing copy | **81.8%** (54/66) |
+| Social posts | **77.0%** (47/61) |
+
+English AI text, 533 passages: **98.1%**. Marketing and social posts are the
+weak spots - the registers AI writes most naturally.
 
 Works across three different model families (GPT-3.5 / Qwen-1.5B / Qwen3-VL-30B),
 so it learned general AI-writing features rather than one model's fingerprint.
@@ -419,8 +434,8 @@ so it learned general AI-writing features rather than one model's fingerprint.
 | Test | Result |
 |---|---|
 | Real Qwen AI texts (75) | **100% flagged High**, avg 0.985 |
-| Chinese human texts (500) | **0.4% false positive**, avg 0.040 |
-| English human texts (497) | **0% false positive** (after v8 retrain) |
+| Chinese human texts (2500) | **0.52% false positive** |
+| English human texts (2500) | **0.56% false positive** |
 | Cross-domain (7 domains, 420) | 100% in every domain |
 | Long text (>200 chars) | **F1 = 0.9899** |
 
