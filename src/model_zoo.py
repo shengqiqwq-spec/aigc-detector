@@ -233,9 +233,11 @@ def detect(text, tier="auto"):
     p = _ALL_PREDICTORS[chosen](text)
     # 按长度给出置信度提示
     n = len(text)
-    if n >= 150: confidence = "高(长文本~99.6%)"
-    elif n >= 80: confidence = "中(80-150字~98.6%)"
-    else: confidence = "低(<80字,仅供参考)"
+    # 分桶F1来自 report.json 的实测评测(分组防泄漏切分)
+    if n >= 200: confidence = "高(长文本 F1~0.99)"
+    elif n >= 80: confidence = "中(80-200字 F1~0.98)"
+    elif n >= 40: confidence = "中低(40-80字 F1~0.95)"
+    else: confidence = "低(<40字,仅供参考)"
     return {"language": lang, "tier": chosen, "ai_probability": round(p, 4),
             "bucket": bucket(p), "confidence": confidence, "text_len": n,
             "latency_ms": round((time.time()-t0)*1000, 1),
@@ -247,12 +249,24 @@ if __name__ == "__main__":
         print(json.dumps(detect_profile(), ensure_ascii=False, indent=2)); sys.exit(0)
     if "--benchmark" in args:
         sample = "首先，人工智能的发展是一个重要话题。其次，从多个角度看都有意义。总的来说需要综合考虑各种因素。"
+        print(f"{'档位':<10}{'AI概率':>8}{'首次':>10}{'热推理(中位)':>14}")
+        print("-" * 44)
         for t in _ALL_PREDICTORS:
             try:
-                r = detect(sample, tier=t)
-                print(f"{t:8s} AI概率={r['ai_probability']:.3f} 耗时={r['latency_ms']}ms")
+                t0 = time.time()
+                first = _ALL_PREDICTORS[t](sample)
+                cold = (time.time() - t0) * 1000
+                # 热身后取5次中位数, 才是真实推理速度
+                times = []
+                for _ in range(5):
+                    t1 = time.time()
+                    _ALL_PREDICTORS[t](sample)
+                    times.append((time.time() - t1) * 1000)
+                times.sort()
+                print(f"{t:<10}{first:>8.3f}{cold:>9.0f}ms{times[2]:>12.2f}ms")
             except Exception as e:
-                print(f"{t:8s} 失败: {type(e).__name__} {str(e)[:80]}")
+                print(f"{t:<10} 失败: {type(e).__name__} {str(e)[:50]}")
+        print("\n注: '首次'含模型加载/import开销, '热推理'是实际单次耗时")
         sys.exit(0)
     if not args:
         print("用法: python model_zoo.py \"文本\" [--tier tier1|tier2|tier3] [--benchmark] [--info]"); sys.exit(1)
