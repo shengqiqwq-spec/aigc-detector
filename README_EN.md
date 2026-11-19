@@ -8,12 +8,16 @@ A **fully-local** toolkit for AIGC (AI-generated content) text detection and hum
 
 ## ✨ Highlights
 
-- **4 model tiers**: 2MB (mobile) → 14MB (universal), auto-selected by hardware
+- **4 model tiers**: 357KB (mobile) → 2.8MB (universal), auto-selected by hardware
 - **Chinese detection F1 = 0.9814** (leak-free grouped split; 98.96% on long text)
 - **Bilingual**: auto-detects language and switches models automatically
+- **numpy only**: every tier ships a pure-numpy inference path, no sklearn needed
 - **100% local**: no network, no API cost, no data upload
 - **Zero-hallucination humanizer**: programmatic n-gram audit, never alters facts/numbers
-- **Multi-accelerator**: CPU / Intel Arc GPU (Vulkan) / Intel NPU (OpenVINO)
+
+> 📖 Read **[怎么用好](docs/怎么用好.md)** first (Chinese) - it explains when the
+> detector is reliable, when it silently fails, and why it returns "cannot judge"
+> instead of inventing a score.
 
 ---
 
