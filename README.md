@@ -557,7 +557,17 @@ HC3 数据集是 2022 年 GPT-3.5 风格，对当代模型输出识别率极低�
 
 ## 📜 许可
 
-Apache 2.0。模型基于 [HC3](https://huggingface.co/datasets/Hello-SimpleAI/HC3)（CC BY-SA 4.0）训练。
+**代码**：Apache 2.0（见 [LICENSE](LICENSE)）。
+
+**模型权重**：基于 [HC3](https://huggingface.co/datasets/Hello-SimpleAI/HC3) 训练，
+该数据集采用 **CC BY-SA 4.0**。按 ShareAlike 条款，权重视为衍生作品，
+**以 CC BY-SA 4.0 提供**，而非 Apache 2.0。两者不冲突：
+
+- 你可以自由使用、修改、商用本项目的**代码**（Apache 2.0）
+- 若你分发或改造**权重**，需保留 CC BY-SA 4.0 及其署名
+
+如果你要拿去商用且不能接受 ShareAlike，用你自己的数据重训
+（`scripts/train_zh_v7.py` / `train_en_v8.py` 都保留了完整流程）。
 
 ---
 
