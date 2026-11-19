@@ -103,15 +103,15 @@ with gr.Blocks(title="AIGC 检测器") as demo:
     with gr.Tab("ℹ️ 关于"):
         gr.Markdown("""
         ### 模型能力
-        - zh_final: F1 0.9933 (中文默认)
-        - en_v5: F1 0.9955 (英文)
-        - cnn_full: 0.954 (极速)
-        - tier0: 0.897 (手机)
+        - tier1: F1 0.9804 (中文默认, 分组防泄漏评估)
+        - en: F1 0.9915 (英文)
+        - tier3: 0.954 (需 torch, 未用新数据重训)
+        - tier0: 0.885 (手机轻量档)
 
         ### 限制
-        - 短文本(<50字)约96%
-        - 识别模型指纹而非AI感
-        - 不等同 Turnitin
+        - 短文本(<50字)约94-95%, 仅供参考
+        - 识别模型指纹而非抽象AI感; 知情者刻意规避可绕过
+        - 不等同 Turnitin, 不能作为学术指控唯一依据
 
         [GitHub](https://github.com/shengqiqwq-spec/aigc-detector)
         """)
