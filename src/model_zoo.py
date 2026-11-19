@@ -215,6 +215,20 @@ def bucket(p):
     return "高" if p >= 0.7 else ("中" if p >= 0.3 else "低")
 
 def detect(text, tier="auto"):
+    # 输入校验: 空/纯空白/过短无意义输入直接返回明确结果, 不做无意义的概率猜测
+    if text is None:
+        text = ""
+    if not isinstance(text, str):
+        text = str(text)
+    stripped = text.strip()
+    # 有效字符: 中英文/数字
+    meaningful = sum(1 for c in stripped if c.isalnum() or '\u4e00' <= c <= '\u9fff')
+    if meaningful == 0:
+        return {"language": "unknown", "tier": tier, "ai_probability": 0.0,
+                "bucket": "低", "confidence": "无有效内容(纯符号/空白)",
+                "text_len": len(text), "latency_ms": 0.0,
+                "profile": "skipped", "error": "no_meaningful_content"}
+
     lang = "zh"
     try:
         from lang_router import detect_lang_detail

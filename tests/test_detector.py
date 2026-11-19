@@ -206,5 +206,54 @@ class TestHumanizeQuality:
         assert max(drops) > 0.1, f"改写没有效果: 最大降幅{max(drops):.3f}"
 
 
+
+
+# ---------- 输入健壮性 ----------
+class TestEdgeInputs:
+    """边界输入不能崩溃, 且无意义输入要明确拒绝"""
+
+    def test_empty_string(self):
+        r = M.detect("")
+        assert r.get("error") == "no_meaningful_content"
+        assert r["ai_probability"] == 0.0
+
+    def test_whitespace_only(self):
+        r = M.detect("   \n\t  ")
+        assert r.get("error") == "no_meaningful_content"
+
+    def test_punctuation_only(self):
+        r = M.detect("！？。，、；：")
+        assert r.get("error") == "no_meaningful_content"
+
+    def test_emoji_only(self):
+        r = M.detect("😀😁😂🤣")
+        assert r.get("error") == "no_meaningful_content"
+
+    def test_none_input(self):
+        r = M.detect(None)
+        assert r.get("error") == "no_meaningful_content"
+
+    def test_very_long_text(self):
+        """8500字长文本不能爆内存或超时"""
+        import time
+        txt = "人工智能技术正在深刻改变各行各业。" * 500
+        t0 = time.time()
+        r = M.detect(txt)
+        elapsed = time.time() - t0
+        assert 0.0 <= r["ai_probability"] <= 1.0
+        assert elapsed < 5.0, f"超长文本耗时{elapsed:.1f}s"
+
+    def test_mixed_language(self):
+        r = M.detect("AI技术is changing the world rapidly，这是重要话题。")
+        assert r["language"] in ("zh", "en")
+        assert 0.0 <= r["ai_probability"] <= 1.0
+
+    def test_humanize_never_crashes(self):
+        from humanize2 import humanize_v2
+        for t in ["", " ", "a", "！？。", "人工智能" * 100]:
+            out = humanize_v2(t if t else " ", strength=1.0)
+            assert isinstance(out, str)
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
