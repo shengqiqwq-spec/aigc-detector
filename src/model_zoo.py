@@ -287,6 +287,52 @@ _ALL_PREDICTORS["en_tier0"] = pred_en_tier0
 def bucket(p):
     return "高" if p >= 0.7 else ("中" if p >= 0.3 else "低")
 
+
+def _reject_reason(t):
+    """识别非自然语言输入, 返回原因字符串或 None
+
+    JSON/HTML/代码行这些不是"写作风格"问题, 给它们打概率是误导。
+    """
+    import re as _re
+    sample = t[:400]
+    # JSON 对象/数组: 以 { 或 [ 开头, 且有 key: value 结构
+    if _re.match(r"^\s*[\{\[]", sample) and _re.search(r'["\']?\w+["\']?\s*:', sample):
+        return "JSON"
+    # HTML/XML 标签
+    if len(_re.findall(r"<[a-zA-Z/][^>]{0,40}>", sample)) >= 2:
+        return "HTML"
+    # 代码特征: 命中任意 2 项即可 (代码文本很短, 凑不满 3 项)
+    code_signals = sum([
+        bool(_re.search(r"^\s{2,}\S", t, _re.M)),             # 缩进行
+        bool(_re.search(r"\b(def|function|class|import|return|var|let|const|public|private)\s+\w", t)),
+        bool(_re.search(r"[{}()\[\]]\s*$", t, _re.M)),        # 行末括号
+        "==" in t or "->" in t or "::" in t or ");" in t,
+        bool(_re.search(r"\w+\(\w*[,)][^。；]*$", t)),         # 函数调用
+    ])
+    if code_signals >= 2:
+        return "代码"
+    # 纯数字/编号串
+    if _re.fullmatch(r"[\d\s\.,;:\-\+\*/=()]+", t):
+        return "纯数字/公式"
+    return None
+
+
+def _repeat_ratio(t):
+    """最长重复子串占全文的比例, 用于识别"同一句复制很多遍"的输入"""
+    if len(t) < 40:
+        return 0.0
+    best = 0
+    # 试几个长度档, 找是否存在大段重复
+    for span in (len(t)//8, len(t)//4, len(t)//2):
+        if span < 20:
+            continue
+        head = t[:span]
+        cnt = t.count(head)
+        if cnt > 1:
+            best = max(best, min(1.0, span * cnt / len(t)))
+    return best
+
+
 def detect(text, tier="auto"):
     # 输入校验: 空/纯空白/过短无意义输入直接返回明确结果, 不做无意义的概率猜测
     if text is None:
@@ -301,6 +347,23 @@ def detect(text, tier="auto"):
                 "bucket": "低", "confidence": "无有效内容(纯符号/空白)",
                 "text_len": len(text), "latency_ms": 0.0,
                 "profile": "skipped", "error": "no_meaningful_content"}
+
+    # 非自然语言拒绝: 给 JSON/HTML/代码 打 AI 概率没有意义, 而且模型会
+    # 输出 0.3~0.4 这种看起来煞有介事的假分数
+    _reject = _reject_reason(stripped)
+    if _reject:
+        return {"language": "unknown", "tier": tier, "ai_probability": 0.0,
+                "bucket": "低", "confidence": f"不是自然语言文本({_reject})",
+                "text_len": len(text), "latency_ms": 0.0,
+                "profile": "skipped", "error": "not_natural_language"}
+
+    # 重复文本拒绝: "这是一段测试文本。" * 500 会被判成高 AI, 但那不是写作风格
+    rep = _repeat_ratio(stripped)
+    if rep > 0.5 and len(stripped) > 200:
+        return {"language": "unknown", "tier": tier, "ai_probability": 0.0,
+                "bucket": "低", "confidence": f"重复内容占比 {rep:.0%}，无法判断写作风格",
+                "text_len": len(text), "latency_ms": 0.0,
+                "profile": "skipped", "error": "repetitive_content"}
 
     lang = "zh"
     try:

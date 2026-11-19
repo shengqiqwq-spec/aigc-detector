@@ -821,5 +821,43 @@ sys.meta_path.insert(0, _Block())
                         f"model_zoo 顶层有 {mod!r}, 纯 numpy 环境会挂"
 
 
+class TestInputRejection:
+    """非自然语言输入不该给 AI 概率
+
+    之前 JSON 得到 0.415、HTML 得到 0.320、重复 500 遍的句子得到 0.970 ——
+    看起来煞有介事的假分数, 比直接说"这不是自然语言"更误导。
+    """
+
+    REJECT = {
+        "json": '{"key": "value", "number": 123}',
+        "html": "<div><p>这是HTML内容</p></div>",
+        "code": "def foo(x):\n    return x * 2\n",
+        "punct": "。，！？；：",
+        "numbers": "1234567890",
+        "repeat": "这是一段测试文本。" * 500,
+    }
+
+    def test_non_text_is_rejected(self):
+        for name, txt in self.REJECT.items():
+            r = M.detect(txt)
+            assert r.get("error") in ("not_natural_language",
+                                      "repetitive_content",
+                                      "no_meaningful_content"), \
+                f"{name} 未被拒绝, 返回 p={r['ai_probability']:.3f}"
+
+    def test_normal_text_not_rejected(self):
+        """含数字/英文/冒号/括号的正常文本必须正常处理"""
+        cases = [
+            "本季度销售额 1520 万元，同比增长 23.5%，其中华东区贡献 640 万，占比 42%。",
+            "该项目使用 React 18 和 TypeScript 5.0 开发，通过 Webpack 打包，部署在 Nginx 上。",
+            "注意：以下三种情况需要重新提交——资料不完整、签名缺失、超过有效期。",
+            "会议定于周三下午（14:00-16:00）在 A 座 301 举行，请提前 10 分钟到场。",
+            "需要准备的材料：身份证复印件、两张照片、申请表原件。全部准备好后到窗口提交。",
+        ]
+        for t in cases:
+            r = M.detect(t)
+            assert r.get("error") is None, f"正常文本被误拒: {r.get('error')} | {t[:30]}"
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
