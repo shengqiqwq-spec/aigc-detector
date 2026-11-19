@@ -9,7 +9,7 @@ A **fully-local** toolkit for AIGC (AI-generated content) text detection and hum
 ## ✨ Highlights
 
 - **4 model tiers**: 2MB (mobile) → 14MB (universal), auto-selected by hardware
-- **Chinese detection F1 = 0.9797** (leak-free grouped split; 98.82% on long text)
+- **Chinese detection F1 = 0.9805** (leak-free grouped split; 99.10% on long text)
 - **Bilingual**: auto-detects language and switches models automatically
 - **100% local**: no network, no API cost, no data upload
 - **Zero-hallucination humanizer**: programmatic n-gram audit, never alters facts/numbers
@@ -55,7 +55,7 @@ Windows users can double-click `启动Demo.bat`.
 
 | Tier | Model | Size | Overall F1 | Short | Long | Use Case |
 |---|---|---|---|---|---|---|
-| **zh_final** ⭐ | TF-IDF+LR | 13MB | **0.9797** | 0.9514 | 0.9882 | All machines (default) |
+| **zh_final** ⭐ | TF-IDF+LR | 2.6MB | **0.9805** | 0.9489 | 0.9910 | All machines (default) |
 | en_v5 | TF-IDF+LR dual | 12MB | **0.9905** | 0.9513 | 0.9894 | English |
 | tier3 | CharTextCNN | 1.9MB | **0.9709** | — | — | Needs torch, 0.5ms |
 | tier0 | Hashing+NB | 4.2MB | **0.9144** | — | — | Mobile (Chinese) |
