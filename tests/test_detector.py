@@ -614,10 +614,17 @@ class TestGradioDispatch:
             assert pre in src, f"选项「{c}」在 dispatch 中无对应分支"
 
     def test_humanize_actually_changes_text(self):
-        """改写函数必须真的改变文本"""
-        import importlib
-        import app_gradio
-        importlib.reload(app_gradio)
+        """改写函数必须真的改变文本
+
+        app_gradio 需要 gradio (可选依赖), 没装时跳过 —— 但这个测试本身
+        抓的是 UI dispatch 失配, 有 gradio 的环境必须跑。
+        """
+        try:
+            import importlib
+            import app_gradio
+            importlib.reload(app_gradio)
+        except ImportError as e:
+            pytest.skip(f"UI 测试需要可选依赖 gradio: {e}")
 
         src = "各部门：为提升全体员工的专业技能与综合素质，经研究决定开展年度员工培训计划。培训将围绕专业技能培训及企业文化宣贯等方面展开。"
         for choice in ["规则改写（零依赖，推荐）", "程序化引擎（零幻觉）"]:
