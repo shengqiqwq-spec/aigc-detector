@@ -37,6 +37,25 @@ EN_PAREN = [" (which is honestly a pain)", " (we tried this)",
             " (still working on it)"]
 
 ZH_SLOGAN = [
+    # ---- 按模型 coef 排序的高权重 AI 特征 (实测: 这些词最能拉高 AI 分) ----
+    # 「是指」族
+    (r"是指", "说的是"), (r"是指在", "说的是在"), (r"是一种", "算是一种"),
+    (r"是一种(?=[^。，]{0,6}的)", "算是"),
+    # 「用于」族
+    (r"常用于", "经常用来"), (r"用于", "用来"), (r"用来", "拿来"),
+    # 「确保」族
+    (r"确保", "保证"), (r"以保证", "好让"),
+    # 「通常」族
+    (r"通常情况下", "一般情况"), (r"通常", "一般"),
+    # 「可能」族
+    (r"可能会", "可能会"), (r"可能", "也许"),
+    # 「包括」族
+    (r"包括", "里面有"), (r"以及其他", "还有别的"),
+    # 「帮助」族
+    (r"帮助", "帮着"), (r"有助于", "能帮着"),
+    # 「许多」族
+    (r"许多", "很多"), (r"这些都是", "这些都是"),
+    # 书面连接词
     (r"首先[，,]?", ""), (r"其次[，,]?", ""), (r"最后[，,]?", "然后"),
     (r"总的来说[，,]?", "反正"), (r"综上所述[，,]?", "说白了"),
     (r"总而言之[，,]?", "总之"),
@@ -49,8 +68,7 @@ ZH_SLOGAN = [
     (r"此外[，,]", "还有"), (r"并且", "而且"),
     (r"从而", "这样就"), (r"进而", "接着"),
     (r"不仅", "不光"), (r"以及", "和"),
-    (r"用于", "用来"),
-    (r"是一种", "算是"), (r"通常", "一般"), (r"能够", "能"),
+    (r"是一种", "算是"), (r"能够", "能"),
     (r"提供", "给"), (r"使用", "用"), (r"进行", "做"),
     (r"如果您", "如果你"), (r"建议您", "建议你"),
     (r"我们应该", "咱们得"), (r"我们必须", "我们得"),
@@ -60,17 +78,28 @@ ZH_SLOGAN = [
     (r"全面了解", "搞清楚"), (r"充分认识", "明白"),
     (r"高度重视", "看重"), (r"切实履行", "真做到"),
     (r"认真组织", "好好安排"),
+    # ---- 针对「。它」「。这」「，并」这类高权重结构 ----
+    (r"。它", "。这东西"), (r"。这种", "。这类"),
+    (r"，并且", "，而且"), (r"，并", "，还"),
+    # ---- 注入人类高频特征 (coef 最负) ----
+    (r"是(?=[^。，]{2,8}的)", "算是"),
 ]
 
 # ---------- 英文 ----------
 EN_SUBJ = ["honestly", "i think", "in my experience", "to be fair",
-           "personally", "from what i've seen"]
-EN_HEDGE = ["probably", "i guess", "sort of", "maybe", "roughly"]
+           "personally", "from what i've seen", "look"]
+EN_HEDGE = ["probably", "i guess", "sort of", "maybe", "basically", "pretty much"]
 EN_CONNECT = ["though", "anyway", "also", "still", "plus", "but then"]
 
 EN_SLOGAN = [
-    (r"\bit is important to note that\b", "worth noting,"),
-    (r"\bit should be noted that\b", "note that"),
+    # 整段删除的套话开头 (实测: 删掉比替换降幅大得多, 0.966->0.706)
+    (r"\bit is important to note that\s*", ""),
+    (r"\bit should be noted that\s*", ""),
+    (r"\bit is worth noting that\s*", ""),
+    (r"\bwe must carefully consider\b", "we gotta think about"),
+    (r"\bcarefully consider\b", "really think about"),
+    (r"\btransformative paradigm shift\b", "big change"),
+    (r"\bparadigm shift\b", "big change"),
     (r"\bin conclusion\b", "so"),
     (r"\bto summarize\b", "in short"),
     (r"\bfurthermore\b", "also"), (r"\bmoreover\b", "plus"),
@@ -164,7 +193,16 @@ def humanize_v2(text, strength=1.0, lang=None):
             # 2) 注入口语标记, 每句最多一处 (叠加会变结巴, 必须互斥)
             if strength >= 2 and len(s) > 40:
                 # 长句拆短: 在中间逗号处断句(人类特征)
-                mids = [m.start() for m in re.finditer(r"[，；,;]", s)]
+                # 但不能切在刚替换出来的衔接短语上 —— 否则会得到
+                # "Sort of worth noting. We must..." 这种语义断裂
+                BAD_CUTS = ("worth noting", "note that", "in short", "which means",
+                            "big change", "in addition", "说白了", "反正", "顺带说",
+                            "看得出来", "在这之上", "好好聊聊", "再往下看")
+                mids = [m.start() for m in re.finditer(r"[，；,;]", s)
+                        if not any(
+                            s[max(0, m.start() - 20):m.start() + 25].lstrip().lower().startswith(b)
+                            or b in s[max(0, m.start() - 20):m.start() + 25].lower()
+                            for b in BAD_CUTS)]
                 if mids and random.random() < 0.35 * (strength - 1):
                     cut = mids[len(mids) // 2]
                     s = s[:cut] + ("。" if lang == "zh" else ". ") + s[cut + 1:].lstrip()

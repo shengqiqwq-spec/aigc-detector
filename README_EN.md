@@ -111,7 +111,7 @@ cross-model samples from a second generator).
 
 | Method | Reduction | Dependency | Notes |
 |---|---|---|---|
-| **humanize2.py** ⭐ | officialese 0.80 -> **0.29**<br>EN academic 0.89 -> **0.20** | None | Rule-based, zero deps, keeps structure |
+| **humanize2.py** ⭐ | officialese 0.80 -> **0.16**<br>EN academic 0.97 -> **0.13** | None | Rule-based, zero deps, keeps structure |
 | humanize_pro.py | needs a local 14B model | Qwen3-14B | Semantic rewrite, best quality |
 | evasion_engine.py | 96% (in-vocab) | None | Zero hallucination, preserves facts |
 
@@ -124,9 +124,9 @@ and recording the detector score.
 
 | Input | original | best | below 0.5 |
 |---|---|---|---|
-| Chinese officialese | 0.804 | **0.315** | 33/75 |
-| English academic (slogan-dense) | 0.894 | **0.201** | 75/75 |
-| Chinese explanatory (AI keyphrases) | 0.918 | 0.510 | 0/75 |
+| Chinese officialese | 0.804 | **0.161** | **71/75** |
+| English academic (slogan-dense) | 0.966 | **0.130** | **75/75** |
+| Chinese explanatory (AI keyphrases) | 0.918 | 0.532 | **0/75** |
 
 Reference: real human text scores a median of **0.053**, 75th percentile
 **0.066**, max **0.196** on this detector.
