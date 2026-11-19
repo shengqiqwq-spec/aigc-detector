@@ -359,6 +359,14 @@ class TestRepetitionGuardPrecision:
         import model_zoo as M
         assert M.detect("This is a test sentence. " * 50).get("error") == "repetitive_content"
 
+    def test_very_short_repeated_sentence(self):
+        """「测试。」只有 3 个字 —— 分句时不能按长度过滤掉它
+
+        之前用 len>=8 过滤, 结果 diversity 算出 1.0, 重复 200 遍的文本漏网。
+        """
+        import model_zoo as M
+        assert M.detect("测试。" * 200).get("error") == "repetitive_content"
+
     def test_content_diversity_metric(self):
         import model_zoo as M
         # 同一句重复: 多样性接近 0

@@ -396,7 +396,9 @@ def _content_diversity(t):
     import re as _re
     # 英文句号后跟空格才算断句, 否则 "3.14" 会被切开
     parts = _re.split(r"[。！？；\n]+|(?<=[.!?;])\s+", t)
-    sents = [x.strip() for x in parts if len(x.strip()) >= 8]
+    # 不要按长度过滤: "测试。" 只有 3 个字, 但重复 200 遍正是要检测的对象。
+    # 之前用 len>=8 过滤, 结果这种文本 diversity 算出 1.0, 完全漏掉。
+    sents = [x.strip() for x in parts if x.strip()]
     if not sents:
         return 1.0
     return len(set(sents)) / len(sents)
