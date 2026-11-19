@@ -214,3 +214,49 @@ class TestConcurrency:
         assert all(s == 200 for s, _ in results)
         probs = {round(d["ai_probability"], 6) for _, d in results}
         assert len(probs) == 1, f"并发结果不一致: {probs}"
+
+
+class TestThreadedColdStart:
+    """32 线程同时冷启动: 模型不能重复加载, 结果必须一致
+
+    服务启动时多个请求可能同时到达。如果模型加载不是原子的,
+    要么重复加载浪费几百毫秒, 要么读到半初始化的状态给出错误结果。
+    """
+
+    def test_concurrent_cold_start(self):
+        import subprocess
+        import sys as _sys
+
+        ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        code = """
+import sys, threading
+sys.path.insert(0, %r)
+import model_zoo as M
+results, errors = [], []
+def w(i):
+    try:
+        t = ("人工智能技术正在深刻改变各行各业的方方面面，这是一段并发测试文本。"
+             if i %% 2 else
+             "Artificial intelligence is transforming every industry in a concurrent test.")
+        d = M.detect(t)
+        results.append((i, round(d.get("ai_probability", -1), 6), d.get("tier")))
+    except Exception as e:
+        errors.append(type(e).__name__)
+ths = [threading.Thread(target=w, args=(i,)) for i in range(32)]
+[t.start() for t in ths]
+[t.join() for t in ths]
+zh = {p for i, p, _ in results if i %% 2}
+en = {p for i, p, _ in results if i %% 2 == 0}
+assert not errors, errors
+assert len(results) == 32, len(results)
+assert len(zh) == 1, f"中文结果不一致: {zh}"
+assert len(en) == 1, f"英文结果不一致: {en}"
+print("ok")
+""" % os.path.join(ROOT_DIR, "src")
+
+        r = subprocess.run([_sys.executable, "-c", code], capture_output=True,
+                           text=True, timeout=300,
+                           env={k: v for k, v in os.environ.items()
+                                if k.upper() not in ("PYTHONPATH", "PYTHONHOME")})
+        assert r.returncode == 0, f"并发冷启动失败:\n{r.stderr[-600:]}"
+        assert "ok" in r.stdout
