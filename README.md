@@ -452,7 +452,8 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
-CI 会在 Ubuntu / Windows 上自动跑全部测试（Python 3.9 & 3.11）。
+CI 会在 Ubuntu / Windows 上自动跑全部测试（Python 3.11 / 3.13 / 3.14，
+外加一个只装 numpy 的纯 numpy 环境）。实测 3.14 也能正常跑。
 无 torch 环境下 CNN 相关测试自动跳过。
 
 ---

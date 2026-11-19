@@ -360,7 +360,8 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
-CI runs on Ubuntu / Windows with Python 3.9 & 3.11.
+CI runs on Ubuntu / Windows with Python 3.11 / 3.13 / 3.14, plus a
+numpy-only job. Verified working on 3.14 as well.
 CNN tests auto-skip when torch is absent.
 
 ---
