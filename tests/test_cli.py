@@ -317,6 +317,19 @@ class TestNonProseRejection:
             d = M.detect(text)
             assert d.get("error"), f"{name} 没有被拒绝, 给了 {d['ai_probability']}"
 
+    def test_chinese_without_punctuation_is_accepted(self):
+        """中文不靠空格分词, 一整句不打标点是正常写法
+
+        曾经被「无分隔长字符序列」规则误伤: 5000个a 该拒, 但一段 60 字的
+        正常中文句子不该拒。
+        """
+        sys.path.insert(0, SRC)
+        import model_zoo as M
+        t = ("在这个信息爆炸的时代我们需要学会筛选有价值的内容而不是被大量的"
+             "碎片化信息所淹没因此培养批判性思维和独立判断能力显得尤为重要。")
+        d = M.detect(t)
+        assert not d.get("error"), f"正常中文被误拒: {d['error']}"
+
     def test_normal_text_is_accepted(self):
         sys.path.insert(0, SRC)
         import model_zoo as M

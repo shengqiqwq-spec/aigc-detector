@@ -345,9 +345,13 @@ def _reject_reason(t):
     # 纯数字/编号串
     if _re.fullmatch(r"[\d\s\.,;:\-\+\*/=()]+", t):
         return "纯数字/公式"
-    # 超长无空格词串: 5000 个 a 不是写作风格, 是数据
+    # 超长无空格词串: 5000 个 a 不是写作风格, 是数据。
+    # 只对拉丁字母串生效 —— 中文本来就不靠空格分词, 一整句话不打标点是
+    # 正常的写作习惯(有人写东西就是一口气写下来), 不能判成非自然语言。
     if len(sample) > 30 and not _re.search(r"\s", sample[:1000]):
-        if len(_re.findall(r"[A-Za-z\u4e00-\u9fff]", sample)) / len(sample) > 0.95:
+        _lat = len(_re.findall(r"[A-Za-z]", sample))
+        _cjk = len(_re.findall(r"[\u4e00-\u9fff]", sample))
+        if _cjk < len(sample) * 0.3 and _lat / len(sample) > 0.9:
             return "无分隔的长字符序列"
     # URL / base64 / 编码数据
     if _re.match(r"^\s*(https?|ftp)://\S+\s*$", sample):
