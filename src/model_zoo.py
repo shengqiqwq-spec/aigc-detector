@@ -409,6 +409,13 @@ def detect(text, tier="auto"):
             "profile": prof if tier == "auto" else "manual"}
 
 if __name__ == "__main__":
+    # Windows 控制台默认 cp1252/cp936, 直接 print 中文会 UnicodeEncodeError。
+    # 命令行入口强制 UTF-8, 避免"检测能跑但一输出就崩"。
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     args = sys.argv[1:]
     if "--info" in args:
         print(json.dumps(detect_profile(), ensure_ascii=False, indent=2)); sys.exit(0)

@@ -73,6 +73,33 @@ class TestCLI:
         assert data.get("error") == "no_meaningful_content"
 
 
+class TestConsoleEncoding:
+    """Windows 控制台默认 cp1252/cp936, 输出中文会崩
+
+    这个 bug 只在 Windows runner 上暴露: 本机终端恰好是 UTF-8, 一切都正常,
+    但任何用 cmd/PowerShell 的用户跑 CLI 都会 UnicodeEncodeError。
+    """
+
+    def test_chinese_output_under_cp1252(self):
+        env = dict(os.environ)
+        env["PYTHONPATH"] = SRC
+        env["PYTHONIOENCODING"] = "cp1252"
+        r = subprocess.run(
+            [sys.executable, SCRIPT, "人工智能技术正在深刻改变各行各业。"],
+            capture_output=True, text=True, timeout=300, env=env,
+        )
+        assert r.returncode == 0, f"cp1252 下崩溃: {r.stderr[-400:]}"
+        assert "ai_probability" in r.stdout
+
+    def test_info_under_cp1252(self):
+        env = dict(os.environ)
+        env["PYTHONPATH"] = SRC
+        env["PYTHONIOENCODING"] = "cp1252"
+        r = subprocess.run([sys.executable, SCRIPT, "--info"],
+                           capture_output=True, text=True, timeout=180, env=env)
+        assert r.returncode == 0, f"cp1252 下 --info 崩溃: {r.stderr[-400:]}"
+
+
 class TestPublicAPI:
     """README 里示范的调用方式, 必须一直可用"""
 
