@@ -102,7 +102,10 @@ def audit_and_break(src, dst, n=5, max_iter=6, max_inserts=3):
             skipped.add(victim); continue
         ins = cands[0]
         inserted_pos.add(ins)
-        dst = dst[:ins] + "，" + random.choice(breaks) + dst[ins:]
+        # 在该标点处插入: 用 "，词" 替换原标点, 避免出现 "……，严格讲，" 这种双标点
+        punc = dst[ins]
+        joiner = "，" if punc == "，" else punc
+        dst = dst[:ins] + joiner + random.choice(breaks) + "，" + dst[ins + 1:]
         inserted += 1
     return dst, len(residual_grams(src, dst, n))
 

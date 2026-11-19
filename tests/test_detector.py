@@ -255,5 +255,49 @@ class TestEdgeInputs:
             assert isinstance(out, str)
 
 
+
+
+# ---------- 程序化引擎质量 ----------
+class TestEvasionEngineQuality:
+    """程序化改写(零幻觉)的输出质量回归测试"""
+
+    def test_no_double_punctuation(self):
+        """不能出现 '，严格讲，' 这种插在标点后导致的双标点/病句"""
+        from evasion_engine import humanize_programmatic
+        import re
+        txt = "首先，人工智能技术正在深刻改变各行各业。其次，在医疗领域，AI辅助诊断能提高效率。"
+        for _ in range(15):
+            out, _rep = humanize_programmatic(txt)
+            assert "，，" not in out, f"双标点: {out[:100]}"
+            assert "。。" not in out
+            assert "；；" not in out
+            # 虚词后面紧跟标点、且前面是逗号, 才是病句 (如 "，严格讲。")
+            assert "，严格讲。" not in out and "，其实。" not in out
+            assert not re.search(r"，(其实|说白了|说到底|严格讲)(。|；|！|？)", out), f"病句: {out[:100]}"
+
+    def test_no_double_punctuation_edge(self):
+        from evasion_engine import humanize_programmatic
+        txt = "起初，人工智能技术正在深刻改变各行各业。"
+        for _ in range(15):
+            out, _ = humanize_programmatic(txt)
+            assert "，，" not in out
+            assert "。。" not in out
+
+    def test_facts_preserved(self):
+        from evasion_engine import humanize_programmatic
+        txt = "2024年该公司营收达到1500万元，同比增长30%，员工规模扩大到500人。"
+        for _ in range(5):
+            out, _ = humanize_programmatic(txt)
+            for fact in ["2024", "1500", "30", "500"]:
+                assert fact in out, f"数字被改: {fact} 不在 {out}"
+
+    def test_output_not_empty(self):
+        from evasion_engine import humanize_programmatic
+        out, rep = humanize_programmatic("人工智能技术正在改变世界。")
+        assert len(out) > 0
+        assert isinstance(rep, dict)
+        assert "residual_5grams" in rep
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
