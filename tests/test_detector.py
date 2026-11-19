@@ -306,20 +306,33 @@ class TestModelFiles:
     """防止 .joblib 更新后 .pkl 还是旧的 (加载器优先读 .pkl)"""
 
     def test_no_stale_joblib(self):
-        """如果同目录同时有 .joblib 和 .pkl, 它们应该都存在, 且不能只有 joblib"""
+        """不应同时存在 .joblib 和 .pkl 的同名文件 (重复占空间, 且易混淆哪个生效)"""
         import glob
-        ckpt_root = M.BASE
         issues = []
-        for d in glob.glob(os.path.join(ckpt_root, "detector_*")):
+        for d in glob.glob(os.path.join(M.BASE, "detector_*")):
             if not os.path.isdir(d):
                 continue
-            joblibs = glob.glob(os.path.join(d, "*.joblib"))
-            pkls = glob.glob(os.path.join(d, "*.pkl"))
-            if joblibs and not pkls:
-                # 只有 joblib, 加载器会走 fallback, 可以接受但应提示
-                issues.append(f"{os.path.basename(d)}: only joblib")
-        # 不允许"只有joblib"的情况出现在交付档位里
-        assert not issues, f"以下档位缺少 pkl (加载器会 fallback): {issues}"
+            stems_j = {os.path.splitext(os.path.basename(f))[0]
+                       for f in glob.glob(os.path.join(d, "*.joblib"))}
+            stems_p = {os.path.splitext(os.path.basename(f))[0]
+                       for f in glob.glob(os.path.join(d, "*.pkl"))}
+            dup = stems_j & stems_p
+            if dup:
+                issues.append(f"{os.path.basename(d)}: {sorted(dup)}")
+        assert not issues, f"存在重复的 joblib/pkl 文件对 (应删 joblib): {issues}"
+
+    def test_shipped_tiers_have_pkl(self):
+        """交付档位必须有 pkl (加载器优先读 pkl, 保证读到的就是新模型)"""
+        import glob
+        missing = []
+        for d in glob.glob(os.path.join(M.BASE, "detector_*")):
+            if not os.path.isdir(d):
+                continue
+            if d.endswith("detector_cnn_full"):
+                continue   # CNN 用 model.pt
+            if not glob.glob(os.path.join(d, "*.pkl")):
+                missing.append(os.path.basename(d))
+        assert not missing, f"以下档位缺少 pkl: {missing}"
 
     def test_all_tier_reports_exist(self):
         for d in ["detector_zh_final", "detector_en_v5", "detector_tier0"]:
