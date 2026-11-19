@@ -16,7 +16,7 @@ AIGC 检测器 - 统一模型矩阵框架
   python model_zoo.py --benchmark            # 跑各档基准对比
   python model_zoo.py --info                 # 显示机型检测结果和推荐档位
 """
-import sys, os, json, time, platform
+import sys, os, json, time, platform, ctypes
 
 # joblib 只被 sklearn 回退路径用到。快路径 (fast.npz / fast_nb.npz) 不需要它,
 # 所以改成惰性导入 —— 否则一个只装了 numpy 的环境连快路径都起不来。
@@ -29,18 +29,49 @@ sys.path.insert(0, _HERE)
 
 _PROFILE_CACHE = None
 
+def _mem_total_gb():
+    """不依赖 psutil 的内存总量探测, 拿不到时返回 8.0(保守)"""
+    try:
+        if sys.platform == "win32":
+            class _MS(ctypes.Structure):
+                _fields_ = [("dwLength", ctypes.c_ulong),
+                            ("dwMemoryLoad", ctypes.c_ulong),
+                            ("ullTotalPhys", ctypes.c_ulonglong),
+                            ("ullAvailPhys", ctypes.c_ulonglong),
+                            ("ullTotalPageFile", ctypes.c_ulonglong),
+                            ("ullAvailPageFile", ctypes.c_ulonglong),
+                            ("ullTotalVirtual", ctypes.c_ulonglong),
+                            ("ullAvailVirtual", ctypes.c_ulonglong),
+                            ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+            st = _MS()
+            st.dwLength = ctypes.sizeof(_MS)
+            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)):
+                return st.ullTotalPhys / 2**30
+        else:
+            page = os.sysconf("SC_PAGE_SIZE")
+            pages = os.sysconf("SC_PHYS_PAGES")
+            return page * pages / 2**30
+    except Exception:
+        pass
+    return 8.0
+
+
 def detect_profile():
     """检测机型性能, 返回推荐档位 (结果缓存, 首次~1.7s, 后续0ms)"""
     global _PROFILE_CACHE
     if _PROFILE_CACHE is not None:
         return dict(_PROFILE_CACHE)
-    cores, mem_gb, has_torch = 4, 8.0, False
+    # 没有 psutil 时用标准库兜底: 只写死 4 核/8GB 会把 32GB 机器
+    # 误判成低配, 进而给出错误的档位推荐。
+    cores = os.cpu_count() or 4
+    mem_gb = _mem_total_gb()
     try:
         import psutil
-        cores = psutil.cpu_count(logical=False) or 4
+        cores = psutil.cpu_count(logical=False) or cores
         mem_gb = psutil.virtual_memory().total / 2**30
     except ImportError:
         pass
+    has_torch = False
     # torch 只在需要时探测, 避免昂贵导入拖慢启动
     try:
         import importlib.util

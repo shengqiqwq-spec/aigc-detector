@@ -247,6 +247,42 @@ class TestLangRouterBoundaries:
         assert d["lang"] == "zh", "行为变了, 请更新这条测试和文档"
 
 
+class TestProfileWithoutPsutil:
+    """没有 psutil 时不能瞎猜机型
+
+    历史 bug: 无 psutil 时写死 cores=4/mem_gb=8.0, 把 32GB 机器误判成低配。
+    requirements.txt 里 psutil 是可选的, 所以大多数用户都走这条路径。
+    """
+
+    def test_memory_probe_without_psutil(self):
+        sys.path.insert(0, SRC)
+        import model_zoo as M
+        gb = M._mem_total_gb()
+        assert 1.0 < gb < 4096.0, f"内存探测返回不合理: {gb}"
+
+    def test_memory_probe_matches_psutil(self):
+        """标准库探测应与 psutil 结果接近(±5%)"""
+        sys.path.insert(0, SRC)
+        import model_zoo as M
+        psutil = pytest.importorskip("psutil")
+        ours = M._mem_total_gb()
+        theirs = psutil.virtual_memory().total / 2**30
+        assert abs(ours - theirs) / theirs < 0.05, f"{ours} vs {theirs}"
+
+    def test_cores_not_hardcoded(self):
+        """核数应来自系统, 不是常数 4"""
+        sys.path.insert(0, SRC)
+        import model_zoo as M
+        import os as _os
+        real = _os.cpu_count()
+        if real is None:
+            pytest.skip("系统不报核数")
+        M._PROFILE_CACHE = None
+        p = M.detect_profile()
+        # 有 psutil 时取物理核(可能小于逻辑核); 无 psutil 时等于逻辑核
+        assert 1 <= p["cores"] <= real, f"核数 {p['cores']} 超出系统实际 {real}"
+
+
 class TestModelFiles:
     """仓库发布的模型文件必须完整且不含 pickle"""
 
