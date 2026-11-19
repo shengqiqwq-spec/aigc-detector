@@ -299,5 +299,40 @@ class TestEvasionEngineQuality:
         assert "residual_5grams" in rep
 
 
+
+
+# ---------- 模型文件完整性 ----------
+class TestModelFiles:
+    """防止 .joblib 更新后 .pkl 还是旧的 (加载器优先读 .pkl)"""
+
+    def test_no_stale_joblib(self):
+        """如果同目录同时有 .joblib 和 .pkl, 它们应该都存在, 且不能只有 joblib"""
+        import glob
+        ckpt_root = M.BASE
+        issues = []
+        for d in glob.glob(os.path.join(ckpt_root, "detector_*")):
+            if not os.path.isdir(d):
+                continue
+            joblibs = glob.glob(os.path.join(d, "*.joblib"))
+            pkls = glob.glob(os.path.join(d, "*.pkl"))
+            if joblibs and not pkls:
+                # 只有 joblib, 加载器会走 fallback, 可以接受但应提示
+                issues.append(f"{os.path.basename(d)}: only joblib")
+        # 不允许"只有joblib"的情况出现在交付档位里
+        assert not issues, f"以下档位缺少 pkl (加载器会 fallback): {issues}"
+
+    def test_all_tier_reports_exist(self):
+        for d in ["detector_zh_final", "detector_en_v5", "detector_tier0"]:
+            p = os.path.join(M.BASE, d, "report.json")
+            assert os.path.exists(p), f"{d} 缺 report.json"
+
+    def test_tier0_uses_new_data(self):
+        """tier0 应包含 ai_new 字段, 证明用当代数据重训过"""
+        p = os.path.join(M.BASE, "detector_tier0", "report.json")
+        with open(p, encoding="utf-8") as f:
+            r = json.load(f)
+        assert r.get("ai_new", 0) > 0, "tier0 未用当代数据重训"
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

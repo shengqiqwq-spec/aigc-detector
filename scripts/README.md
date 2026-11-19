@@ -18,7 +18,8 @@ export AIGC_CKPT_DIR=/path/to/ckpt
 | `gen_zh_short.py` | 专门生成短文本 AI 样本 | `data/ai_zh_short2.jsonl` |
 | `augment_data.py` | HC3 句子级增强 | — |
 | `clean_en_data.py` | 英文数据清洗 | — |
-| `train_cnn_full.py` | CharTextCNN 极速档 | `ckpt/detector_cnn_full/` |
+| `train_tier0.py` | **轻量档**（2MB，手机/嵌入式） | `ckpt/detector_tier0/` |
+| `train_cnn_full.py` | CharTextCNN 极速档（需 torch） | `ckpt/detector_cnn_full/` |
 | `gh_api_push.py` | 绕过 github.com:443 封锁的推送工具 | — |
 
 ## 复现完整流程
@@ -57,8 +58,9 @@ python scripts/gen_zh_short.py 500      # 短文本 500 条
 ### 3. 训练
 
 ```bash
-python scripts/train_zh_v7.py
-python scripts/train_en_v7.py
+python scripts/train_zh_v7.py     # 中文主力档
+python scripts/train_en_v7.py     # 英文
+python scripts/train_tier0.py     # 轻量档(2MB, 手机)
 ```
 
 脚本会打印每档 C 值的测试集/独立集 F1，并把最优模型存到 `ckpt/`。
@@ -72,7 +74,17 @@ python scripts/train_en_v7.py
 | 特征 | char(1,5) TF-IDF, 300k 维 | char_wb(2,5) 200k + word(1,2) 100k |
 | 模型 | LogisticRegression C=12 | LogisticRegression C=10 |
 | 切分 | **按原问题分组**（防泄漏） | 同左 |
-| 独立集 F1 | **0.9804** | **0.9939** |
+| 独立集 F1 | **0.9804** | **0.9915** |
+| 轻量档 tier0 F1 | 0.9144 (Hashing+NB, 4.2MB) | — |
+
+⚠️ **模型文件格式**：脚本输出 `.joblib`，但线上加载器**优先读 `.pkl`**。
+训练完请转换，否则改动不生效：
+
+```python
+import joblib, pickle
+obj = joblib.load("ckpt/xxx/clf.joblib")
+pickle.dump(obj, open("ckpt/xxx/clf.pkl","wb"), protocol=pickle.HIGHEST_PROTOCOL)
+```
 
 ## 两个必须遵守的坑
 
