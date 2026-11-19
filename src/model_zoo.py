@@ -181,7 +181,13 @@ def _make_cnn_predictor(ckpt_dir):
 
 def pred_tier3(text):
     if "cnn_aug" not in _CACHE:
-        _CACHE["cnn_aug"] = _make_cnn_predictor("detector_cnn_full")   # 全量训练版
+        try:
+            _CACHE["cnn_aug"] = _make_cnn_predictor("detector_cnn_full")
+        except ImportError as e:
+            raise RuntimeError(
+                "tier3 需要 PyTorch。安装: pip install torch  "
+                "(或用默认的 tier1，准确率更高且无需 torch)"
+            ) from e
     return _CACHE["cnn_aug"](text)
 
 def pred_tier3o(text):
