@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 
 import model_zoo as M
 import lang_router
+from humanize2 import humanize_v2
 
 # torch 可选: 没有则跳过 CNN 相关测试
 try:
@@ -525,6 +526,66 @@ class TestEnglishGenreGeneralization:
                 hits += 1
         # 允许 1 条换措辞漏判
         assert hits >= len(self.EN_GENRES) - 1, f"英文文体只识别了 {hits}/{len(self.EN_GENRES)}"
+
+
+class TestHumanizerOutputIntegrity:
+    """改写器的 4 个历史 bug 回归: 语言混入/标点破损/换行丢失/强度失效"""
+
+    ZH_DOC = "各部门：为提升全体员工的专业技能与综合素质，经研究决定开展年度员工培训计划。培训将围绕专业技能培训及企业文化宣贯等方面展开。请各部门高度重视，认真组织实施。"
+
+    EN_DOC = ("Artificial intelligence represents a transformative paradigm shift "
+              "in modern society. It is important to note that we must carefully "
+              "consider the ethical implications of these technologies.")
+
+    def test_english_stays_english(self):
+        """v2 bug: 英文被塞入「个人感觉，」"""
+        for _ in range(10):
+            out = humanize_v2(self.EN_DOC, 2.0)
+            cjk = sum(1 for c in out if "\u4e00" <= c <= "\u9fff")
+            assert cjk == 0, f"英文改写混入 {cjk} 个中文字符: {out[:80]}"
+
+    def test_chinese_stays_chinese_and_keeps_punct(self):
+        """v2 bug: 「各部门：为」变成「各部门：，为」"""
+        for _ in range(10):
+            out = humanize_v2(self.ZH_DOC, 2.0)
+            assert "：" not in out or "：，" not in out, f"冒号后插入了逗号: {out[:80]}"
+            assert out.count("，") >= 1
+
+    def test_paragraph_structure_preserved(self):
+        """v2 bug: 所有换行被删除, 段落结构被打烂"""
+        src = "第一段内容比较长需要在改写后依然保持独立。\n\n第二段同样是独立的一段内容不能被合并。"
+        out = humanize_v2(src, 2.0)
+        assert "\n\n" in out, f"段落分隔丢失: {out!r}"
+
+    def test_list_lines_untouched(self):
+        """列表行不应被注入口语词"""
+        src = "步骤如下：\n1. 打开软件\n2. 点击设置\n3. 保存配置"
+        out = humanize_v2(src, 2.0)
+        assert "1. 打开软件" in out and "3. 保存配置" in out, f"列表被破坏: {out!r}"
+
+    def test_strength_actually_varies(self):
+        """v2 bug: strength 参数完全无效(1.0 和 3.0 输出相同)"""
+        import random as _r
+        _r.seed(3)
+        low = humanize_v2(self.ZH_DOC, 1.0)
+        _r.seed(3)
+        high = humanize_v2(self.ZH_DOC, 3.0)
+        assert low != high, "strength 未生效, 1.0 与 3.0 输出相同"
+
+    def test_english_punctuation_spacing(self):
+        """英文标点后必须有空格, 不能出现双空格"""
+        for _ in range(10):
+            out = humanize_v2(self.EN_DOC, 2.0)
+            assert "  " not in out, f"出现双空格: {out[:80]}"
+            assert not any(f".{c}" in out for c in "abcdefghijklmnopqrstuvwxyz"), \
+                f"句号后缺空格: {out[:80]}"
+
+    def test_no_slogan_double_replacement(self):
+        """v2 bug: transformative + paradigm shift 叠加成 big big change"""
+        src = "This represents a transformative paradigm shift in modern society."
+        for _ in range(10):
+            out = humanize_v2(src, 2.0)
+            assert "big big" not in out.lower(), f"重复替换: {out}"
 
 
 if __name__ == "__main__":

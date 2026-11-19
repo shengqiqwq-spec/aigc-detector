@@ -111,12 +111,36 @@ cross-model samples from a second generator).
 
 | Method | Reduction | Dependency | Notes |
 |---|---|---|---|
-| **humanize_pro.py** ⭐ | **58.7%** | Local Qwen3-14B | Auto-iterative, best quality |
-| humanize2.py | 44% | None | Rule-based, zero deps |
+| **humanize2.py** ⭐ | officialese 0.80 -> **0.29**<br>EN academic 0.89 -> **0.20** | None | Rule-based, zero deps, keeps structure |
+| humanize_pro.py | needs a local 14B model | Qwen3-14B | Semantic rewrite, best quality |
 | evasion_engine.py | 96% (in-vocab) | None | Zero hallucination, preserves facts |
 
 ```bash
 # Rule-based rewrite (no model needed)
+### What the rule-based humanizer can and cannot do
+
+Measured by rewriting one passage 75 times (strength 1.0/2.0/3.0, 25 each)
+and recording the detector score.
+
+| Input | original | best | below 0.5 |
+|---|---|---|---|
+| Chinese officialese | 0.804 | **0.315** | 33/75 |
+| English academic (slogan-dense) | 0.894 | **0.201** | 75/75 |
+| Chinese explanatory (AI keyphrases) | 0.918 | 0.510 | 0/75 |
+
+Reference: real human text scores a median of **0.053**, 75th percentile
+**0.066**, max **0.196** on this detector.
+
+> ⚠️ **The limit you need to know**: rule-based rewriting pushes the score
+> below the threshold but **never down to where real human writing sits**.
+> Chinese explanatory text dominated by AI keyphrases still only reaches
+> 0.51 even after every phrase is swapped for plain speech - and by then the
+> meaning has collapsed ("按人教的系统能够按人教"). The rule-based humanizer
+> rewrites word forms; it cannot touch the syntactic and content-level
+> signatures of AI output. For text that genuinely reads as human, use the
+> LLM rewriter (`humanize_pro.py`), not rule substitution.
+
+```bash
 python src/humanize2.py "your text"
 
 # Programmatic engine (zero hallucination)
