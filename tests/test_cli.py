@@ -58,9 +58,25 @@ class TestCLI:
         r = _run("--benchmark", timeout=600)
         assert r.returncode == 0, r.stderr[-400:]
         out = r.stdout
-        # 至少要报告 tier1 和 en 两档
         assert "tier1" in out
         assert "en" in out
+        # 不能出现 0.00ms 这种没意义的计时(time.time() 精度不够)
+        assert "0.00ms" not in out.replace(" ", "")
+
+    def test_benchmark_uses_matching_language_sample(self):
+        """en 档必须用英文样本测
+
+        以前统一用中文样本, en 档输出 0.051, 让人以为英文模型坏了。
+        """
+        r = _run("--benchmark", timeout=600)
+        assert r.returncode == 0, r.stderr[-400:]
+        for line in r.stdout.splitlines():
+            if line.startswith("en ") or line.startswith("en_tier0"):
+                p_ = float(line.split()[1])
+                assert p_ > 0.3, f"en 档在英文样本上得分过低: {line}"
+            if line.startswith("tier1"):
+                p_ = float(line.split()[1])
+                assert p_ > 0.3, f"tier1 在中文样本上得分过低: {line}"
 
     def test_explicit_tier(self):
         r = _run("这是一段用于测试指定档位的中文文本内容。", "--tier", "tier0")

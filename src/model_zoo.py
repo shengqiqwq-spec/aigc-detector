@@ -508,25 +508,34 @@ if __name__ == "__main__":
     if "--info" in args:
         print(json.dumps(detect_profile(), ensure_ascii=False, indent=2)); sys.exit(0)
     if "--benchmark" in args:
-        sample = "首先，人工智能的发展是一个重要话题。其次，从多个角度看都有意义。总的来说需要综合考虑各种因素。"
+        # 中英各用对应语言的样本。以前统一用中文样本, en 档在中文上
+        # 输出 0.051 —— 那个数字毫无意义, 只是让人以为英文模型坏了。
+        ZH = ("首先，人工智能的发展是一个重要话题。其次，从多个角度看都有意义。"
+              "总的来说需要综合考虑各种因素。")
+        EN = ("To begin with, artificial intelligence is an important topic. "
+              "Secondly, it matters from several perspectives. Overall, a "
+              "balanced view is required when evaluating these systems.")
         print(f"{'档位':<10}{'AI概率':>8}{'首次':>10}{'热推理(中位)':>14}")
         print("-" * 44)
         for t in _ALL_PREDICTORS:
+            sample = EN if t.startswith("en") else ZH
             try:
-                t0 = time.time()
+                t0 = time.perf_counter()
                 first = _ALL_PREDICTORS[t](sample)
-                cold = (time.time() - t0) * 1000
-                # 热身后取5次中位数, 才是真实推理速度
+                cold = (time.perf_counter() - t0) * 1000
+                # 预热后取 200 次中位数。5 次且用 time.time() 精度不够,
+                # 会打印出 0.00ms 这种没意义的数字。
                 times = []
-                for _ in range(5):
-                    t1 = time.time()
+                for _ in range(200):
+                    t1 = time.perf_counter()
                     _ALL_PREDICTORS[t](sample)
-                    times.append((time.time() - t1) * 1000)
+                    times.append((time.perf_counter() - t1) * 1000)
                 times.sort()
-                print(f"{t:<10}{first:>8.3f}{cold:>9.0f}ms{times[2]:>12.2f}ms")
+                med = times[len(times) // 2]
+                print(f"{t:<10}{first:>8.3f}{cold:>9.0f}ms{med:>12.3f}ms")
             except Exception as e:
                 print(f"{t:<10} 失败: {type(e).__name__} {str(e)[:50]}")
-        print("\n注: '首次'含模型加载/import开销, '热推理'是实际单次耗时")
+        print("\n注: '首次'含模型加载/import开销; '热推理'是 200 次调用的中位数")
         sys.exit(0)
     if not args:
         print("用法: python model_zoo.py \"文本\" [--tier tier1|tier2|tier3] [--benchmark] [--info]"); sys.exit(1)
