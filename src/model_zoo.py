@@ -537,9 +537,40 @@ if __name__ == "__main__":
                 print(f"{t:<10} 失败: {type(e).__name__} {str(e)[:50]}")
         print("\n注: '首次'含模型加载/import开销; '热推理'是 200 次调用的中位数")
         sys.exit(0)
+    USAGE = ('用法: python model_zoo.py "文本" [--tier tier1|tier0|en|en_tier0] '
+             '[--benchmark] [--info]')
     if not args:
-        print("用法: python model_zoo.py \"文本\" [--tier tier1|tier2|tier3] [--benchmark] [--info]"); sys.exit(1)
+        print(USAGE); sys.exit(1)
+
+    # --tier 必须带值。以前直接 args[idx+1] 会 IndexError 崩掉。
     tier = "auto"
     if "--tier" in args:
-        tier = args[args.index("--tier")+1]
-    print(json.dumps(detect(args[0], tier), ensure_ascii=False, indent=2))
+        _i = args.index("--tier")
+        if _i + 1 >= len(args):
+            print(f"错误: --tier 后面缺少档位名\n{USAGE}", file=sys.stderr)
+            sys.exit(2)
+        tier = args[_i + 1]
+
+    # 取第一个非选项、且不是 --tier 值 的参数作为待检测文本。
+    # 以前直接 args[0], 于是 `--tier tier1` 会把 "--tier" 当成文本去检测,
+    # 输出一个 JSON 好像真做了什么事。
+    KNOWN_FLAGS = ("--benchmark", "--info", "--tier")
+    text = None
+    skip_next = False
+    for a in args:
+        if skip_next:
+            skip_next = False
+            continue
+        if a == "--tier":
+            skip_next = True
+            continue
+        if a in KNOWN_FLAGS:
+            continue
+        text = a
+        break
+
+    if text is None:
+        print(f"错误: 没有给出待检测的文本\n{USAGE}", file=sys.stderr)
+        sys.exit(2)
+
+    print(json.dumps(detect(text, tier), ensure_ascii=False, indent=2))

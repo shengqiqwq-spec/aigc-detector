@@ -89,6 +89,24 @@ class TestCLI:
         assert r.returncode == 0, r.stderr[-400:]
         assert json.loads(r.stdout)["tier"] in ("tier1", "tier0", "en", "en_tier0")
 
+    def test_tier_without_value_errors_cleanly(self):
+        """--tier 后没值不能 IndexError 崩溃"""
+        r = _run("这是一段测试文本。", "--tier")
+        assert r.returncode == 2
+        assert "--tier" in (r.stderr or "")
+
+    def test_no_text_argument_errors_cleanly(self):
+        """只给 --tier tier1 没有文本 —— 以前会把 '--tier' 当文本去检测"""
+        r = _run("--tier", "tier1")
+        assert r.returncode == 2
+        assert "文本" in (r.stderr or "")
+
+    def test_tier_before_text_works(self):
+        """--tier 放在文本前面也应该正常"""
+        r = _run("--tier", "tier0", "这是一段用于测试的中文文本内容。")
+        assert r.returncode == 0, r.stderr[-300:]
+        assert json.loads(r.stdout)["tier"] == "tier0"
+
     def test_empty_stdin_like_input(self):
         r = _run("")
         assert r.returncode == 0, r.stderr[-400:]
