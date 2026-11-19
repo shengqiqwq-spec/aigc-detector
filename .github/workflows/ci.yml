@@ -34,7 +34,10 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v
 
-  smoke:
+  # The claim this repo makes is that the four shipped tiers need nothing but
+  # numpy. This job is the only place that claim is actually proven: install
+  # requirements.txt alone, assert sklearn/scipy/joblib are absent, then run.
+  numpy-only:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,11 +45,25 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - name: Install
+      - name: Install nothing but requirements.txt
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Smoke test - detect Chinese AI text
+      - name: Prove sklearn is absent
         run: |
-          python src/model_zoo.py "人工智能技术正在深刻改变各行各业。在医疗领域，AI辅助诊断能提高效率；在教育领域，个性化学习系统能因材施教。然而，数据隐私和算法偏见等问题也需要重视。"
-      - name: Smoke test - hardware profile
-        run: python src/model_zoo.py --info
+          python -c "import importlib.util as u,sys; m=[x for x in ('sklearn','scipy','joblib') if u.find_spec(x) is None]; print('absent:',m); sys.exit(0 if len(m)==3 else 1)"
+      - name: Detect Chinese AI text
+        run: |
+          python src/model_zoo.py "人工智能技术正在深刻改变各行各业。在医疗领域，AI辅助诊断能提高效率；在教育领域，个性化学习系统能够因材施教。然而，数据隐私和算法偏见等问题也需要重视，需要建立完善的监管框架。"
+      - name: Detect English AI text
+        run: |
+          python src/model_zoo.py "Artificial intelligence represents a transformative paradigm shift in modern society. It is important to note that we must carefully consider the ethical implications of these technologies."
+      - name: Reject non-prose input
+        run: |
+          python -c "import sys; sys.path.insert(0,'src'); import model_zoo as M; r=M.detect('{\"key\": \"value\"}'); assert r.get('error')=='not_natural_language', r; print('ok: non-prose rejected')"
+      - name: Reject heavy repetition
+        run: |
+          python -c "import sys; sys.path.insert(0,'src'); import model_zoo as M; r=M.detect('这是一段测试文本。'*200); assert r.get('error')=='repetitive_content', r; print('ok: repetition rejected')"
+      - name: Human text must not be flagged
+        run: |
+          python -c "import sys; sys.path.insert(0,'src'); import model_zoo as M; cases=['今天下午去超市买了点菜，回来路上碰到老同学，聊了半个多小时。他说最近换了工作，离家近了不少。','so i finally tried that new coffee place downtown yesterday, honestly not worth the hype.']; [ (lambda r: (r.get('error') is None) and r['ai_probability']<0.5 or (_ for _ in ()).throw(AssertionError(r)))(M.detect(t)) for t in cases ]; print('ok: human text stays low')"
