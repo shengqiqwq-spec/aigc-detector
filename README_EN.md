@@ -185,10 +185,11 @@ so it learned general AI-writing features rather than one model's fingerprint.
 ## ⚠️ Known Limitations
 
 1. **Short text is weaker**: <50 chars carries too little signal — inherent ambiguity (information-theoretic ceiling)
-2. **It recognizes "model fingerprints"**: highly accurate on real Qwen/GPT output (86-100%), but human imitations of AI style may slip through
-3. **New models require retraining**: AI models keep evolving; the detector must be retrained with fresh data
-4. **Not equivalent to Turnitin**: an independent metric, cannot match any commercial detector's exact percentage
-5. **English short text is conservative**: lands in "Medium" rather than "High"
+2. **It recognizes *model fingerprints*, not an abstract "AI feel"**: very accurate on real model output (measured: Qwen-1.5B 100%, Qwen3-VL-30B 96%, GPT-3.5 99.6%), but it misses deliberately evasive text
+3. **An informed user can evade it**: knowing how the detector works, you can avoid every AI language habit (no "firstly / moreover / in conclusion", short sentences, concrete facts) and it scores low. Measured: five evasive AI-written passages all came back Low (p=0.006-0.069). This is a shared boundary of every statistical-feature detector, not a defect specific to this project.
+4. **New models require retraining**: AI models keep evolving; the detector must be retrained with fresh data
+5. **Not equivalent to Turnitin**: an independent metric, cannot match any commercial detector's exact percentage
+6. **Symbol/whitespace-only input is rejected** with `error: no_meaningful_content` instead of a guessed probability
 
 ---
 
