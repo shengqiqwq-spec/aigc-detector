@@ -690,5 +690,75 @@ class TestFastInferParity:
             assert abs(_M.pred_tier1(t) - fast.predict_proba(t)) < 1e-9
 
 
+class TestFastNBParity:
+    """Hashing+NB 档的纯 numpy 实现必须与 sklearn 一致
+
+    踩过的坑: HashingVectorizer 用的是有符号 murmurhash3_bytes_s32 再取
+    abs(h) % n_features, 不是 murmurhash3_32(positive=True)。索引对不上时
+    特征完全错位, 概率会饱和到 0/1。
+    """
+
+    def test_hash_index_matches_sklearn(self):
+        """hash 索引必须与 HashingVectorizer 实际输出一致
+
+        注意: 不能用 murmurhash3_32(positive=True) 作为参照 —— 它在负数时做
+        h & 0x7fffffff, 而 HashingVectorizer 用 abs(signed_h) % n_features
+        (见 _hashing_fast.pyx)。两者在负数上不同, 例如 'ab':
+            abs(-1681926305) % 65536 = 10401   <- 实际行为
+            murmurhash3_32(positive=True) % 65536 = 55135
+        所以这里直接拿 vectorizer 的实际输出对照。
+        """
+        pytest.importorskip("sklearn")
+        from sklearn.feature_extraction.text import HashingVectorizer
+        from fast_nb import hash_index
+
+        n = 65536
+        for feat in ["ab", "abc", "智能", "1234"]:
+            vec = HashingVectorizer(analyzer="char", ngram_range=(len(feat), len(feat)),
+                                    n_features=n, alternate_sign=False, norm=None,
+                                    lowercase=False)
+            actual = vec.transform([feat]).indices.tolist()[0]
+            assert hash_index(feat, n, 0) == actual, \
+                f"{feat!r} hash 不一致: mine={hash_index(feat,n,0)} actual={actual}"
+
+    def test_chinese_tier0_parity(self):
+        pytest.importorskip("sklearn")
+        import pickle
+        from fast_nb import FastNB
+
+        d = os.path.join(M.BASE, "detector_tier0")
+        if not os.path.exists(os.path.join(d, "fast_nb.npz")):
+            pytest.skip("fast_nb.npz 未导出")
+        vec = pickle.load(open(os.path.join(d, "vec.pkl"), "rb"))
+        clf = pickle.load(open(os.path.join(d, "clf.pkl"), "rb"))
+        fast = FastNB(d)
+
+        for t in ["人工智能技术正在深刻改变各行各业。",
+                  "今天下午去超市买了点菜，回来路上碰到老同学。",
+                  "各部门：为提升员工素质，经研究决定开展年度培训计划。"]:
+            expect = float(clf.predict_proba(vec.transform([t]))[0, 1])
+            got = fast.predict_proba(t)
+            assert abs(expect - got) < 1e-5, f"tier0 数值不一致: {expect} vs {got}"
+
+    def test_english_tier0_parity(self):
+        pytest.importorskip("sklearn")
+        import pickle
+        from fast_nb import FastNB
+
+        d = os.path.join(M.BASE, "detector_en_tier0")
+        if not os.path.exists(os.path.join(d, "fast_nb.npz")):
+            pytest.skip("fast_nb.npz 未导出")
+        vec = pickle.load(open(os.path.join(d, "vec.pkl"), "rb"))
+        clf = pickle.load(open(os.path.join(d, "clf.pkl"), "rb"))
+        fast = FastNB(d)
+
+        for t in ["Artificial intelligence is transforming modern society.",
+                  "so i tried that new coffee place downtown yesterday.",
+                  "The team met to discuss the roadmap and priorities."]:
+            expect = float(clf.predict_proba(vec.transform([t]))[0, 1])
+            got = fast.predict_proba(t)
+            assert abs(expect - got) < 1e-5, f"en_tier0 数值不一致: {expect} vs {got}"
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

@@ -119,6 +119,20 @@ def _fast(model_dir, analyzer=None):
     return d
 
 
+def _fast_nb(model_dir):
+    """取缓存的 FastNB (Hashing+NB 快路径), 不可用返回 None"""
+    key = ("nb", model_dir)
+    if key in _FAST_CACHE:
+        return _FAST_CACHE[key]
+    try:
+        from fast_nb import FastNB
+        d = FastNB(model_dir)
+    except Exception:
+        d = None
+    _FAST_CACHE[key] = d
+    return d
+
+
 def pred_tier1(text):
     d = os.path.join(BASE, "detector_zh_final")        # 分组防泄漏 F1=0.9802
     fd = _fast(d, "char")
@@ -226,13 +240,19 @@ PREDICTORS = {"tier1": pred_tier1, "tier3": pred_tier3}
 
 def pred_tier0(text):
     d = os.path.join(BASE, "detector_tier0")
+    fd = _fast_nb(d)
+    if fd is not None:
+        return float(fd.predict_proba(text))
     vec = _load_joblib(d, "vec.joblib")
     clf = _load_joblib(d, "clf.joblib")
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
 
 def pred_en_tier0(text):
-    """英文轻量档: Hashing+NB, 2MB, 手机/嵌入式"""
+    """英文轻量档: Hashing+NB, 手机/嵌入式"""
     d = os.path.join(BASE, "detector_en_tier0")
+    fd = _fast_nb(d)
+    if fd is not None:
+        return float(fd.predict_proba(text))
     vec = _load_joblib(d, "vec.joblib")
     clf = _load_joblib(d, "clf.joblib")
     return float(clf.predict_proba(vec.transform([text]))[0, 1])

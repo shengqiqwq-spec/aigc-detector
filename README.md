@@ -223,9 +223,19 @@ M.warm_up()          # 之后每次 detect 只要 1~2 ms
 想给其他模型也生成快路径（例如自己重训的）：
 
 ```bash
-python scripts/export_fast.py ckpt/detector_zh_final          # 单特征
-python scripts/export_fast.py ckpt/detector_en_v5 --dual      # 双特征
+python scripts/export_fast.py ckpt/detector_zh_final          # 单特征 TF-IDF+LR
+python scripts/export_fast.py ckpt/detector_en_v5 --dual      # 双特征 TF-IDF+LR
+python scripts/export_fast.py ckpt/detector_tier0 --nb        # Hashing+NB 轻量档
 ```
+
+四个档位都已覆盖，冷启动 1719 ms → 581 ms，热路径:
+
+| 档位 | 优化前 | 优化后 |
+|---|---|---|
+| tier1 | 1.20 ms | **0.02 ms** |
+| en | 1.43 ms | **<0.01 ms** |
+| tier0 | 0.71 ms | **0.11 ms** |
+| en_tier0 | 0.71 ms | **0.08 ms** |
 
 纯 numpy 推理与 sklearn 数值一致到 **1e-8**（有测试守门）。
 

@@ -213,9 +213,19 @@ M.warm_up()          # afterwards each detect() takes 1-2 ms
 To generate the fast path for a model you trained yourself:
 
 ```bash
-python scripts/export_fast.py ckpt/detector_zh_final          # single vectorizer
-python scripts/export_fast.py ckpt/detector_en_v5 --dual      # two vectorizers
+python scripts/export_fast.py ckpt/detector_zh_final          # single TF-IDF+LR
+python scripts/export_fast.py ckpt/detector_en_v5 --dual      # dual TF-IDF+LR
+python scripts/export_fast.py ckpt/detector_tier0 --nb        # Hashing+NB tier
 ```
+
+All four tiers are covered. Cold start 1719 ms -> 581 ms; hot path:
+
+| Tier | before | after |
+|---|---|---|
+| tier1 | 1.20 ms | **0.02 ms** |
+| en | 1.43 ms | **<0.01 ms** |
+| tier0 | 0.71 ms | **0.11 ms** |
+| en_tier0 | 0.71 ms | **0.08 ms** |
 
 The numpy inference matches sklearn to **1e-8**, which a test enforces.
 
