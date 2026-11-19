@@ -326,6 +326,27 @@ class TestModelFiles:
             p = os.path.join(M.BASE, d, "report.json")
             assert os.path.exists(p), f"{d} 缺 report.json"
 
+
+    def test_en_tier0_available(self):
+        """英文轻量档存在且可用"""
+        assert "en_tier0" in M._ALL_PREDICTORS
+        p = M._ALL_PREDICTORS["en_tier0"]("Artificial intelligence is transforming the world rapidly.")
+        assert 0.0 <= p <= 1.0
+
+    def test_en_tier0_reports_exist(self):
+        p = os.path.join(M.BASE, "detector_en_tier0", "report.json")
+        assert os.path.exists(p)
+        with open(p, encoding="utf-8") as f:
+            r = json.load(f)
+        assert r["f1"] > 0.9
+        assert r.get("ai_new", 0) > 0, "英文轻量档未用当代数据"
+
+    def test_en_routing_picks_en_tier(self):
+        """英文文本应路由到英文档, 不是中文档"""
+        r = M.detect("Artificial intelligence is transforming the world rapidly.")
+        assert r["language"] == "en"
+        assert r["tier"].startswith("en")
+
     def test_tier0_uses_new_data(self):
         """tier0 应包含 ai_new 字段, 证明用当代数据重训过"""
         p = os.path.join(M.BASE, "detector_tier0", "report.json")

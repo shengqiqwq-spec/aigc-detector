@@ -18,7 +18,8 @@ export AIGC_CKPT_DIR=/path/to/ckpt
 | `gen_zh_short.py` | 专门生成短文本 AI 样本 | `data/ai_zh_short2.jsonl` |
 | `augment_data.py` | HC3 句子级增强 | — |
 | `clean_en_data.py` | 英文数据清洗 | — |
-| `train_tier0.py` | **轻量档**（2MB，手机/嵌入式） | `ckpt/detector_tier0/` |
+| `train_tier0.py` | **中文轻量档**（4MB，手机/嵌入式） | `ckpt/detector_tier0/` |
+| `train_en_tier0.py` | **英文轻量档** | `ckpt/detector_en_tier0/` |
 | `train_cnn_full.py` | CharTextCNN 极速档（需 torch） | `ckpt/detector_cnn_full/` |
 | `gh_api_push.py` | 绕过 github.com:443 封锁的推送工具 | — |
 
@@ -60,7 +61,8 @@ python scripts/gen_zh_short.py 500      # 短文本 500 条
 ```bash
 python scripts/train_zh_v7.py     # 中文主力档
 python scripts/train_en_v7.py     # 英文
-python scripts/train_tier0.py     # 轻量档(2MB, 手机)
+python scripts/train_tier0.py     # 中文轻量档
+python scripts/train_en_tier0.py  # 英文轻量档
 ```
 
 脚本会打印每档 C 值的测试集/独立集 F1，并把最优模型存到 `ckpt/`。

@@ -45,12 +45,11 @@ def detect_profile():
         has_torch = importlib.util.find_spec("torch") is not None
     except Exception:
         has_torch = False
+    # 低配机型推荐轻量档; 常规机型用主力档
     if mem_gb < 4 or cores <= 2:
-        rec = "tier1"
-    elif mem_gb >= 8:
-        rec = "tier1"        # 基准测试显示tier1增强版综合最优
+        rec = "tier0"          # 手机/嵌入式: 用 4MB 轻量档
     else:
-        rec = "tier1"
+        rec = "tier1"          # 常规机型: tier1 综合最优
     _PROFILE_CACHE = {"cores": cores, "mem_gb": round(mem_gb, 1),
                       "has_torch": has_torch, "recommended": rec,
                       "os": platform.system()}
@@ -198,6 +197,13 @@ def pred_tier0(text):
     clf = _load_joblib(d, "clf.joblib")
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
 
+def pred_en_tier0(text):
+    """英文轻量档: Hashing+NB, 2MB, 手机/嵌入式"""
+    d = os.path.join(BASE, "detector_en_tier0")
+    vec = _load_joblib(d, "vec.joblib")
+    clf = _load_joblib(d, "clf.joblib")
+    return float(clf.predict_proba(vec.transform([text]))[0, 1])
+
 def pred_en(text):
     """英文检测器 v7: 分组防泄漏切分 F1=0.9917, char_wb+word 双特征"""
     d = os.path.join(BASE, "detector_en_v5")
@@ -217,6 +223,7 @@ def pred_en(text):
 _ALL_PREDICTORS = dict(PREDICTORS)
 _ALL_PREDICTORS["en"] = pred_en
 _ALL_PREDICTORS["tier0"] = pred_tier0
+_ALL_PREDICTORS["en_tier0"] = pred_en_tier0
 
 def bucket(p):
     return "高" if p >= 0.7 else ("中" if p >= 0.3 else "低")
@@ -243,11 +250,15 @@ def detect(text, tier="auto"):
     except Exception:
         pass
     prof = detect_profile()
-    # 英文自动路由到英文模型
-    if lang == "en" and tier == "auto":
-        chosen = "en"
+    # 自动路由: 英文走英文模型; 低配机型走轻量档
+    if tier == "auto":
+        low_end = prof["recommended"] == "tier0"
+        if lang == "en":
+            chosen = "en_tier0" if low_end else "en"
+        else:
+            chosen = "tier0" if low_end else "tier1"
     else:
-        chosen = prof["recommended"] if tier == "auto" else tier
+        chosen = tier
     if chosen not in _ALL_PREDICTORS:
         chosen = "tier1"
     t0 = time.time()

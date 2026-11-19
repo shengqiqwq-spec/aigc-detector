@@ -1,0 +1,9 @@
+{
+  "f1": 0.9408,
+  "alpha": 0.05,
+  "model": "Hashing+MultinomialNB (en)",
+  "features": 65536,
+  "train_n": 40132,
+  "test_n": 14414,
+  "ai_new": 1688
+}
