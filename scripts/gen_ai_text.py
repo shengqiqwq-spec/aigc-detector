@@ -11,7 +11,7 @@ import openvino_genai as ovg
 LANG = sys.argv[1]           # zh / en
 TARGET = int(sys.argv[2]) if len(sys.argv)>2 else 300
 OUT = os.path.join(DATA_DIR, f"ai_{LANG}_ov.jsonl")
-MODEL = r"D:\models\ov_qwen1.5b"
+MODEL = os.environ.get("AIGC_GEN_MODEL", "models/ov_qwen1.5b")
 
 TOPICS_ZH = ["人工智能与就业","在线教育","城市交通治理","短视频对青少年","新能源汽车",
  "心理健康","远程医疗","食品安全","气候变暖","老龄化社会","乡村振兴","数字经济",

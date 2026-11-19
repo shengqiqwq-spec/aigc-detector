@@ -347,7 +347,8 @@ class TestModelFiles:
         """英文人类文本批量检测, 误判率应为0"""
         import random as _r
         hu = []
-        src = os.path.join(r"D:\ai_train\data", "hc3_en_real.jsonl")
+        src = os.environ.get("AIGC_DATA_DIR",
+                             os.path.join(ROOT, "data")) + os.sep + "hc3_en_real.jsonl"
         if not os.path.exists(src):
             import pytest as _p
             _p.skip("英文语料不在本机")
@@ -372,7 +373,8 @@ class TestModelFiles:
         """中文人类文本批量检测误判率"""
         import random as _r
         hu = []
-        src = os.path.join(r"D:\ai_train\data", "hc3_all.jsonl")
+        src = os.environ.get("AIGC_DATA_DIR",
+                             os.path.join(ROOT, "data")) + os.sep + "hc3_all.jsonl"
         if not os.path.exists(src):
             import pytest as _p
             _p.skip("中文语料不在本机")

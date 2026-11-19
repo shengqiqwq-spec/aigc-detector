@@ -1,3 +1,4 @@
+import os
 # -*- coding: utf-8 -*-
 """
 数据增强: 句子级切分, 补短文本样本
@@ -6,8 +7,8 @@
 """
 import json, re, random
 
-SRC=r"D:\ai_train\data\hc3_all.jsonl"
-OUT=r"D:\ai_train\data\hc3_aug.jsonl"
+SRC = os.environ.get("AIGC_SRC", os.path.join(os.path.dirname(__file__), "..", "data", "hc3_all.jsonl"))
+OUT = os.environ.get("AIGC_OUT", os.path.join(os.path.dirname(__file__), "..", "data", "hc3_aug.jsonl"))
 random.seed(42)
 
 def split_sents(t, min_len=20, max_len=120):

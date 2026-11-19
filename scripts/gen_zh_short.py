@@ -10,7 +10,7 @@ import openvino_genai as ovg
 
 OUT = DATA_DIR + r"\ai_zh_short2.jsonl"
 TARGET = int(sys.argv[1]) if len(sys.argv)>1 else 500
-MODEL = r"D:\models\ov_qwen1.5b"
+MODEL = os.environ.get("AIGC_GEN_MODEL", "models/ov_qwen1.5b")
 
 # 短文本场景: 问答回复、评论、说明、建议
 PROMPTS = [

@@ -1,3 +1,4 @@
+import os
 # -*- coding: utf-8 -*-
 """
 英文HC3数据清洗: 去除预处理格式泄漏
@@ -7,8 +8,8 @@
 """
 import json, re
 
-SRC = r"D:\ai_train\data\hc3_en_real.jsonl"
-OUT = r"D:\ai_train\data\hc3_en_clean.jsonl"
+SRC = os.environ.get("AIGC_SRC", os.path.join(os.path.dirname(__file__), "..", "data", "hc3_en_real.jsonl"))
+OUT = os.environ.get("AIGC_OUT", os.path.join(os.path.dirname(__file__), "..", "data", "hc3_en_clean.jsonl"))
 
 def clean(t):
     if not isinstance(t, str): return None
