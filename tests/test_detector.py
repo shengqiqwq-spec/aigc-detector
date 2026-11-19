@@ -760,5 +760,66 @@ class TestFastNBParity:
             assert abs(expect - got) < 1e-5, f"en_tier0 数值不一致: {expect} vs {got}"
 
 
+class TestNumpyOnlyEnvironment:
+    """只装 numpy 也必须能跑全部档位
+
+    model_zoo 曾经顶层 import joblib, 导致快路径形同虚设 —— 即使只走
+    fast.npz 也要先装 joblib/sklearn。这个测试用独立进程屏蔽 sklearn,
+    验证四个档位在纯 numpy 下都可用。
+    """
+
+    BLOCKER = """
+import sys
+class _Block:
+    def find_module(self, name, path=None):
+        if name.split(".")[0] in ("sklearn", "scipy", "joblib", "psutil"):
+            return self
+        return None
+    def load_module(self, name):
+        raise ImportError(f"{name} 被测试屏蔽")
+sys.meta_path.insert(0, _Block())
+"""
+
+    def test_all_tiers_without_sklearn(self):
+        import subprocess
+        import tempfile
+        import textwrap
+
+        script = textwrap.dedent(self.BLOCKER) + textwrap.dedent(f"""
+            sys.path.insert(0, {os.path.join(ROOT, "src")!r})
+            import model_zoo as M
+            M.warm_up()
+            for tier in ("tier1", "en", "tier0", "en_tier0"):
+                p = M._ALL_PREDICTORS[tier]("测试文本内容足够长以便模型判断是否AI生成")
+                assert 0.0 <= p <= 1.0, f"{{tier}} 返回非法概率 {{p}}"
+            print("OK")
+        """)
+
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False,
+                                         encoding="utf-8") as f:
+            f.write(script)
+            path = f.name
+        try:
+            r = subprocess.run([sys.executable, path], capture_output=True,
+                               text=True, timeout=180)
+            assert "OK" in r.stdout, f"纯 numpy 环境失败:\n{r.stdout}\n{r.stderr[-800:]}"
+        finally:
+            os.unlink(path)
+
+    def test_no_top_level_heavy_imports(self):
+        """model_zoo 顶层不能 import sklearn/scipy/joblib"""
+        src_path = os.path.join(ROOT, "src", "model_zoo.py")
+        with open(src_path, encoding="utf-8") as f:
+            src = f.read()
+        head = src.split('"""', 2)[-1]   # 跳过 docstring
+        for mod in ("import joblib", "import sklearn", "import scipy"):
+            for line in head.splitlines():
+                stripped = line.strip()
+                if stripped.startswith(mod):
+                    # 必须缩进(在函数内)且有惰性导入注释
+                    assert line.startswith((" ", "\t")), \
+                        f"model_zoo 顶层有 {mod!r}, 纯 numpy 环境会挂"
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

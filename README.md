@@ -20,7 +20,7 @@
 ## 🚀 快速开始
 
 ```bash
-# 1. 安装依赖（只需 scikit-learn 等基础包）
+# 1. 安装依赖（只需 numpy —— 四个档位都带纯 numpy 快路径）
 pip install -r requirements.txt
 
 # 2. 检测文本（自动判断语言 + 自动选档）

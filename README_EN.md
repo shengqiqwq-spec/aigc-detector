@@ -20,7 +20,7 @@ A **fully-local** toolkit for AIGC (AI-generated content) text detection and hum
 ## 🚀 Quick Start
 
 ```bash
-# 1. Install dependencies (only scikit-learn and friends needed)
+# 1. Install dependencies (numpy is enough - every tier ships a pure-numpy fast path)
 pip install -r requirements.txt
 
 # 2. Detect text (auto language detection + auto tier selection)

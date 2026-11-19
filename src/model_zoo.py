@@ -17,7 +17,9 @@ AIGC 检测器 - 统一模型矩阵框架
   python model_zoo.py --info                 # 显示机型检测结果和推荐档位
 """
 import sys, os, json, time, platform
-import joblib
+
+# joblib 只被 sklearn 回退路径用到。快路径 (fast.npz / fast_nb.npz) 不需要它,
+# 所以改成惰性导入 —— 否则一个只装了 numpy 的环境连快路径都起不来。
 
 # 自动定位项目根目录(兼容任意部署路径)
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -70,6 +72,7 @@ def _load_joblib(*parts):
             with open(pkl_path, "rb") as f:
                 _CACHE[key] = pickle.load(f)
         else:
+            import joblib          # 惰性: 只有没有 .pkl 时才需要
             _CACHE[key] = joblib.load(path)
     return _CACHE[key]
 
