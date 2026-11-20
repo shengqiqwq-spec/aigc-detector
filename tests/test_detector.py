@@ -928,3 +928,39 @@ class TestInputRejection:
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
+
+# ---------------------------------------------------------------- 超长/退化输入
+def test_long_repetitive_input_is_linear_not_quadratic():
+    """20 万个相同字符曾经要 100 秒, 因为 _reject_reason 的代码特征正则
+    在全文上跑, 带尾部定点回溯会退化成 O(n^2)。修好后应低于 2 秒。
+
+    这个用例存在的意义: 该缺陷在普通文本上完全不可见 —— 只有单行超长、
+    无标点、字符高度重复的输入才会触发。HTTP 服务里一个请求就能打垮进程。
+    """
+    import time
+    from model_zoo import detect
+    text = "人" * 200_000
+    t0 = time.perf_counter()
+    detect(text)
+    elapsed = time.perf_counter() - t0
+    assert elapsed < 2.0, f"20 万字耗时 {elapsed:.1f}s, 疑似平方级退化"
+
+
+def test_over_limit_text_rejected_fast():
+    """超过上限的文本必须在长度检查处直接返回, 不进任何字符级分析。"""
+    import time
+    from model_zoo import detect
+    t0 = time.perf_counter()
+    d = detect("x" * 1_000_000)
+    elapsed = time.perf_counter() - t0
+    assert d.get("error") == "text_too_long"
+    assert elapsed < 0.5
+
+
+def test_code_json_html_still_rejected_after_sample_limit():
+    """为提速把代码特征检测限制在开头 400 字, 不能因此漏掉识别。"""
+    from model_zoo import detect
+    for txt in ('{"a": 1, "b": [1,2,3]}',
+                '<div class="x"><p>hello</p></div>',
+                "def foo(x):\n    return x + 1"):
+        assert detect(txt).get("error") == "not_natural_language", txt

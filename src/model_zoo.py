@@ -333,12 +333,16 @@ def _reject_reason(t):
     if len(_re.findall(r"<[a-zA-Z/][^>]{0,40}>", sample)) >= 2:
         return "HTML"
     # 代码特征: 命中任意 2 项即可 (代码文本很短, 凑不满 3 项)
+    # 必须用 sample 而不是 t: 这几条正则里 "\w+\(\w*[,)][^。；]*$" 带尾部
+    # 定点回溯, 在 t 全文上跑会退化成 O(n^2)。实测 2 万字单行 955ms、
+    # 20 万字 100 秒 —— 一个请求就能拖垮 HTTP 进程。
+    # 判断"是不是代码"只看开头 400 字足够, 代码的缩进/关键字都在前面。
     code_signals = sum([
-        bool(_re.search(r"^\s{2,}\S", t, _re.M)),             # 缩进行
-        bool(_re.search(r"\b(def|function|class|import|return|var|let|const|public|private)\s+\w", t)),
-        bool(_re.search(r"[{}()\[\]]\s*$", t, _re.M)),        # 行末括号
-        "==" in t or "->" in t or "::" in t or ");" in t,
-        bool(_re.search(r"\w+\(\w*[,)][^。；]*$", t)),         # 函数调用
+        bool(_re.search(r"^\s{2,}\S", sample, _re.M)),        # 缩进行
+        bool(_re.search(r"\b(def|function|class|import|return|var|let|const|public|private)\s+\w", sample)),
+        bool(_re.search(r"[{}()\[\]]\s*$", sample, _re.M)),   # 行末括号
+        "==" in sample or "->" in sample or "::" in sample or ");" in sample,
+        bool(_re.search(r"\w+\(\w*[,)][^。；]*$", sample)),    # 函数调用
     ])
     if code_signals >= 2:
         return "代码"
@@ -414,6 +418,19 @@ def detect(text, tier="auto"):
         text = ""
     if not isinstance(text, str):
         text = str(text)
+
+    # 超长输入保护必须放在最前面。
+    # 放在后面时, 100 万字的文本会先在逐字符扫描(_meaningful)和
+    # _reject_reason 的多条正则上耗掉几十秒, 长度检查根本轮不到执行。
+    # 实测: 100 万字要 200 秒以上 —— HTTP 服务里一个请求就能打垮进程。
+    MAX_CHARS = 500_000
+    if len(text) > MAX_CHARS:
+        return {"language": "unknown", "tier": tier, "ai_probability": 0.0,
+                "bucket": "低",
+                "confidence": f"文本过长({len(text)} 字，上限 {MAX_CHARS})，请分段检测",
+                "text_len": len(text), "latency_ms": 0.0,
+                "profile": "skipped", "error": "text_too_long"}
+
     stripped = text.strip()
     # 有效字符: 中英文/数字
     meaningful = sum(1 for c in stripped if c.isalnum() or '\u4e00' <= c <= '\u9fff')
