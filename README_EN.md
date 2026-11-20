@@ -63,7 +63,7 @@ Windows users can double-click `启动Demo.bat`.
 | **zh_final (v12)** ⭐ | TF-IDF+LR | 2.6MB | **0.9823** | 0.9591 | 0.9906 | All machines (default) |
 | en_v5 | TF-IDF+LR dual | 2.8MB | **0.9905** | 0.9513 | 0.9894 | English |
 | tier3 | CharTextCNN | 1.9MB | **0.9709** | — | — | Needs torch, 0.5ms |
-| tier0 | Hashing+NB | 421KB | **0.9144** | — | — | Mobile (Chinese) |
+| tier0 | Hashing+SGD | ~260KB | **0.9579** | — | — | Mobile (Chinese, v2) |
 | en_tier0 | Hashing+NB | 357KB | **0.9408** | — | — | Mobile (English) |
 
 **Measured head to head** (30 real AI samples + 30 human samples, 100-500 chars):
@@ -246,7 +246,7 @@ aigc-detector/
 ├── src/
 │   ├── model_zoo.py     Detection entry (auto tier, portable)
 │   ├── fast_infer.py    Pure-numpy inference (TF-IDF+LR, cold 1.7s->0.3s)
-│   ├── fast_nb.py       Pure-numpy inference (Hashing+NB, cold 1.4s->0.15s)
+│   ├── fast_nb.py       Pure-numpy inference (Hashing+NB / linear SGD, cold 1.4s->0.15s)
 │   ├── serve.py         Local HTTP API (/detect /info /health)
 │   ├── lang_router.py   Language detection
 │   ├── humanize_pro.py  14B humanizer (semantic rewrite)
@@ -449,7 +449,7 @@ so it learned general AI-writing features rather than one model's fingerprint.
 | en (English) | **0.103ms** | 0.141ms |
 | tier0 (lightweight) | **0.272ms** | 0.306ms |
 
-tier0 is the slowest - it runs Hashing+NB without sparse matmul optimisation.
+tier0 is the slowest - it runs a Hashing sparse path without sparse matmul optimisation.
 It exists for its 421KB footprint, not its speed.
 
 **Concurrency and stability**:

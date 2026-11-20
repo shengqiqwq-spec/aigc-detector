@@ -1,3 +1,12 @@
+## v0.4.3 (2026-11-21)
+- 中文轻量档 tier0 升级：Hashing(2,5)+MultinomialNB → Hashing(2,5)+SGD(log_loss)
+  - 留出集 F1 0.907 → 0.958（3 个随机种子一致领先，+5~6 点）
+  - 模型更小：线性系数 256KB vs NB log概率表 512KB；热路径 0.272ms → 0.246ms
+  - fast_nb.py 扩展线性 fast_nb.npz 格式（coef/intercept），保持纯 numpy 快路径；
+    与 sklearn predict_proba 数值一致（float32 精度内）
+  - en_tier0（英文轻量档）不变，仍为 Hashing+NB
+- 172 项测试通过
+
 ## v0.4.2 (2026-11-21)
 - 中文模型升级 v12：+340 条干净话题外短样本（规则截句，非 LLM 生成）
   - 严格 3 折（源长文本从训练集排除、无泄漏）：话题外短文本召回 54.7% → 72.3%（+17.6 点），人类误报 0→0.02%

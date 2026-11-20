@@ -62,7 +62,7 @@ Windows 用户可直接双击 `启动Demo.bat`。
 | **tier1** ⭐ | TF-IDF+LR (v12) | 2.6MB | **0.9823** | 0.9591 | 0.9797 | 0.9906 |
 | **en** ⭐ | TF-IDF+LR 双特征 (v10) | 5.3MB | **0.9899** | 0.9513 | 0.9939 | 0.9894 |
 | tier3 | CharTextCNN | 1.9MB | **0.9709** | — | — | 极速 0.5ms |
-| tier0 | Hashing+NB | 421KB | **0.9144** | — | — | 手机/嵌入式(中文) |
+| tier0 | Hashing+SGD | ~260KB | **0.9579** | — | — | 手机/嵌入式(中文，v2) |
 | en_tier0 | Hashing+NB | 357KB | **0.9408** | — | — | 手机/嵌入式(英文) |
 
 > **v9 英文模型是一次完整性修复（2026-11-20）。** 之前的仓库里 `pred_en`
@@ -355,7 +355,7 @@ aigc-detector/
 ├── src/
 │   ├── model_zoo.py     检测入口（自动选档、可移植）
 │   ├── fast_infer.py    纯 numpy 推理（TF-IDF+LR，冷启动 1.7s→0.3s）
-│   ├── fast_nb.py       纯 numpy 推理（Hashing+NB，冷启动 1.4s→0.15s）
+│   ├── fast_nb.py       纯 numpy 推理（Hashing+NB / 线性SGD，冷启动 1.4s→0.15s）
 │   ├── serve.py         本地 HTTP API（/detect /info /health）
 │   ├── lang_router.py   语言判断
 │   ├── humanize_pro.py  14B 降AI（语义级重写）
@@ -553,7 +553,7 @@ CI 会在 Ubuntu / Windows 上自动跑全部测试（Python 3.11 / 3.13 / 3.14�
 | en（英文） | **0.103ms** | 0.141ms |
 | tier0（轻量档） | **0.272ms** | 0.306ms |
 
-tier0 反而最慢——它走 Hashing+NB，没有稀疏矩阵乘法的优化；
+tier0 反而最慢——它走 Hashing 稀疏路径，没有稀疏矩阵乘法的优化；
 它存在的理由是内存小（421KB vs 2.6MB），不是快。
 
 **并发与稳定性**：
