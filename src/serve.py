@@ -82,7 +82,22 @@ if __name__ == "__main__":
         sys.stderr.reconfigure(encoding="utf-8")
     except (AttributeError, ValueError):
         pass
-    PORT = 8000
+
+    # 端口原来写死 8000, 而且完全不解析命令行参数 —— `python serve.py --help`
+    # 会直接把服务启起来然后卡住, 用户以为程序挂了。8000 被占用时也没有出路。
+    import argparse
+    ap = argparse.ArgumentParser(
+        description="AIGC 文本检测 HTTP 服务",
+        epilog="示例: python src/serve.py --port 8000\n"
+               "      curl -X POST http://127.0.0.1:8000/detect "
+               "-H 'Content-Type: application/json' -d '{\"text\":\"要检测的文本\"}'")
+    ap.add_argument("--port", type=int, default=8000, help="监听端口 (默认 8000)")
+    ap.add_argument("--host", default="127.0.0.1",
+                    help="监听地址 (默认 127.0.0.1; 局域网访问用 0.0.0.0)")
+    args = ap.parse_args()
+    PORT = args.port
+    HOST = args.host
+
     # 多线程服务器: 单线程 TCPServer 在并发>队列时直接拒绝连接(实测50并发失败14个)
     class ThreadedServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         daemon_threads = True
@@ -95,8 +110,20 @@ if __name__ == "__main__":
     _t0 = _t.time()
     _loaded = M.warm_up()
     print(f"模型预热完成: {', '.join(_loaded)} ({( _t.time()-_t0)*1000:.0f}ms)")
-    print(f"检测服务启动: http://127.0.0.1:{PORT}")
-    print(f"Demo页面:    http://127.0.0.1:{PORT}/")
+    try:
+        httpd = ThreadedServer((HOST, PORT), Handler)
+    except OSError as e:
+        print(f"端口 {PORT} 绑定失败: {e}")
+        print(f"换一个端口试试: python src/serve.py --port {PORT + 1}")
+        sys.exit(1)
+    shown = "127.0.0.1" if HOST in ("0.0.0.0", "") else HOST
+    print(f"检测服务启动: http://{shown}:{PORT}")
+    print(f"Demo页面:    http://{shown}:{PORT}/")
+    print(f"接口:        POST http://{shown}:{PORT}/detect  {{\"text\": \"...\"}}")
     print("按 Ctrl+C 停止")
-    with ThreadedServer(("127.0.0.1", PORT), Handler) as httpd:
+    try:
         httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n已停止")
+    finally:
+        httpd.server_close()

@@ -260,3 +260,39 @@ print("ok")
                                 if k.upper() not in ("PYTHONPATH", "PYTHONHOME")})
         assert r.returncode == 0, f"并发冷启动失败:\n{r.stderr[-600:]}"
         assert "ok" in r.stdout
+
+class TestServeCommandLine:
+    """命令行参数: 之前端口写死 8000, 且完全不解析参数
+
+    `python src/serve.py --help` 会直接启动服务然后卡住 —— 用户以为程序挂了。
+    8000 被占用时也没有任何出路。
+    """
+
+    def test_help_exits_without_serving(self):
+        r = subprocess.run([sys.executable, os.path.join(ROOT, "src", "serve.py"), "--help"],
+                           capture_output=True, text=True, timeout=30,
+                           cwd=ROOT, encoding="utf-8", errors="replace")
+        assert r.returncode == 0, r.stderr[:300]
+        assert "--port" in r.stdout
+        assert "--host" in r.stdout
+
+    def test_custom_port_is_used(self):
+        port = _free_port()
+        p = subprocess.Popen([sys.executable, os.path.join(ROOT, "src", "serve.py"),
+                              "--port", str(port)],
+                             cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            deadline = time.time() + 60
+            ok = False
+            while time.time() < deadline:
+                try:
+                    with urllib.request.urlopen(
+                            f"http://127.0.0.1:{port}/health", timeout=2) as resp:
+                        ok = json.loads(resp.read()).get("status") == "ok"
+                        break
+                except Exception:
+                    time.sleep(0.3)
+            assert ok, "指定端口上没有起来"
+        finally:
+            p.terminate()
+            p.wait(timeout=15)
