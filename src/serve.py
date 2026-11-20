@@ -59,6 +59,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
             n = int(self.headers.get("Content-Length", 0))
             data = json.loads(self.rfile.read(n) or b"{}")
             text = data.get("text", "")
+            if not isinstance(text, str):
+                # 非字符串 text 不能直接 .strip() —— 旧的 AttributeError 会把
+                # "'list' object has no attribute 'strip'" 当错误返回, 泄露实现
+                # 细节且对调用方不友好。给明确的结构化提示。
+                body = json.dumps({"error": "text must be a string",
+                                   "received_type": type(text).__name__},
+                                  ensure_ascii=False).encode()
+                self.send_response(400); self._cors()
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers(); self.wfile.write(body)
+                return
             if not text.strip():
                 raise ValueError("empty text")
             r = M.detect(text)

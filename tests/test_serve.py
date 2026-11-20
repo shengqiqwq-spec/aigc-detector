@@ -296,3 +296,11 @@ class TestServeCommandLine:
         finally:
             p.terminate()
             p.wait(timeout=15)
+
+    def test_non_string_text_returns_structured_error(self, server):
+        """text 为 list/None/int 时, 不该把 AttributeError 当错误文本返回"""
+        for bad in ([1, 2], None, 123):
+            status, data = _post(server, {"text": bad})
+            assert status == 400, (bad, status, data)
+            assert data.get("error") == "text must be a string", (bad, data)
+            assert "received_type" in data, (bad, data)
