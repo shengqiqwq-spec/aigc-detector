@@ -1129,3 +1129,17 @@ class TestLongTextChunking:
                   "I guess the movie was okay, nothing special really."]:
             p = fast.predict_proba(t)
             assert 0.0 <= p <= 1.0
+
+    def test_en_tier0_no_legacy_calibration(self):
+        """en_tier0 v2(SGD) 不得再套用旧NB的(0.25,0.80)标定:
+        该标定会把人类英文误报从~2.5%推到~5.5%。原始分数分离度已经很好,
+        直接用即可, 且必须单调(高分文本概率 > 低分文本)。"""
+        human = ("I mean yeah the movie was okay I guess, some parts dragged on a bit "
+                 "but the ending was decent, probably worth a watch if you are bored.")
+        ai = ("Artificial intelligence is transforming modern education by providing "
+              "personalized learning experiences that adapt to individual student needs "
+              "and pacing across diverse classrooms worldwide and beyond.")
+        ph = M.detect(human, tier="en_tier0")["ai_probability"]
+        pa = M.detect(ai, tier="en_tier0")["ai_probability"]
+        assert pa > ph, "AI 分数应高于人类"
+        assert ph < 0.4, "人类英文不应被旧标定推到 0.4 以上 (误报)"
