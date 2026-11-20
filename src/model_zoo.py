@@ -204,7 +204,16 @@ def _make_cnn_predictor(ckpt_dir):
         nk = len(ks)
         out_ch = sd["convs.0.weight"].shape[0]
         out_dim = sd["fc.weight"].shape[0]   # 1 = 单logit, 2 = 双类
-        conv_ks = [2,3,4,5,6][:nk]
+        # 卷积核大小从权重形状读, 不能硬编码。
+        # Conv1d 权重是 (out_ch, in_ch, k), 所以 shape[2] 就是核大小。
+        # 硬编码 [2,3,4,5,6][:nk] 的老写法会让任何换过核组合的 checkpoint
+        # 在 load_state_dict 处形状不匹配 —— 训练出来的模型根本装不进去。
+        conv_ks = [sd[k].shape[2] for k in sorted(ks, key=lambda x: int(x.split(".")[1]))]
+        # 词表大小不要猜, 直接读权重形状。
+        # 不同训练脚本对 c2i 的偏移不一样(+1 还是 +2), 猜错一位就会在
+        # emb.weight 上形状不匹配 —— 老代码写死 len(c2i)+1, 换个脚本训出来的
+        # checkpoint 就装不进去。读权重永远对。
+        vsz = int(sd["emb.weight"].shape[0])
 
         class CNN(nn.Module):
             def __init__(self, v, embed, nk_, out_ch_, out_dim_):
@@ -217,7 +226,7 @@ def _make_cnn_predictor(ckpt_dir):
                 e = self.emb(x).transpose(1,2)
                 h = [torch.relu(c(e)).max(dim=2)[0] for c in self.convs]
                 return self.fc(self.drop(torch.cat(h,1)))
-        m = CNN(len(c2i), emb_dim, nk, out_ch, out_dim)
+        m = CNN(vsz - 1, emb_dim, nk, out_ch, out_dim)
         m.load_state_dict(sd)
         single_logit = (out_dim == 1)
     else:
@@ -292,14 +301,16 @@ def pred_en_tier0(text):
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
 
 def pred_en(text):
-    """英文检测器: 分组防泄漏切分 ind F1=0.9905 / 误报 0.45%, char_wb+word 双特征
+    """英文检测器: 分组防泄漏切分 ind F1=0.9899 / 误报 0.55%, char_wb+word 双特征
 
-    v9 (2026-11-20): 用本地 16 核扫了 48 个向量化/超参组合, 最优为
-    char_wb(2,5) + min_df=2 + 300k 上限 + sublinear + C=30, 双特征 516,770 维。
-    旧 en_v5 在 HC3 英文 AI 答案上只能检出 13.3%（它只见过 1702 条 AI 文本,
-    学成了"几乎全判人类"）, v9 在同一批样本上 100% 检出、真人 0% 误报。
+    v10 (2026-11-20): 在 v9 基础上补了 126 条本机 1.5B 生成的英语功能性文体样本
+    (商务备忘/客服话术/会议纪要/操作指南), 权重 5。
+      - 功能性文体 4 类命中 1/4 -> 2/4；另外手写 8 条全新样本 2/8 -> 3/8，
+        且 8 条分数全部上升（不是某一条侥幸过线）
+      - 分组独立集 11,157 条 F1 0.9895 -> 0.9899，误报 0.45% -> 0.55%
+    英语 AI 训练数据只有 1.9k 条(人类 52k), 这一带仍是弱项, 但方向是正的。
     """
-    d = os.path.join(BASE, "detector_en_v9")
+    d = os.path.join(BASE, "detector_en_v10")
     fd = _fast(d)
     if fd is not None:
         return float(fd.predict_proba(text))

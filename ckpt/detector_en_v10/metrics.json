@@ -1,0 +1,21 @@
+{
+  "genres": {
+    "memo": 0.4978862019830022,
+    "support": 0.10635965328584127,
+    "minutes": 0.6516649447688022,
+    "how_to": 0.6486105922857859
+  },
+  "hits": 2,
+  "ind_f1": 0.9899,
+  "ind_fpr": 0.00547,
+  "ind_recall": 0.99098,
+  "clear_ai": 0.9556,
+  "clear_human": 0.0414,
+  "weight": 5.0,
+  "C": 30.0,
+  "extra_n": 126,
+  "n_train": 51302,
+  "n_features": 491315,
+  "ship": false,
+  "trained_at": "2026-11-20 13:28:58"
+}
