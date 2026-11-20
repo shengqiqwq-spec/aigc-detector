@@ -67,6 +67,10 @@ const ta = document.getElementById('txt');
 ta.addEventListener('input', () => {
   document.getElementById('cnt').textContent = ta.value.length + ' 字';
 });
+// Ctrl+Enter / Cmd+Enter 直接检测
+ta.addEventListener('keydown', e => {
+  if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ e.preventDefault(); detect(); }
+});
 
 function clearAll(){
   ta.value=''; document.getElementById('cnt').textContent='0 字';
@@ -85,13 +89,21 @@ async function detect(){
   document.getElementById('result').style.display='none';
 
   try{
-    // 调用本地API (需启动 serve.py)
-    const resp = await fetch('http://127.0.0.1:8000/detect', {
+    // API 地址跟着当前页面走 —— serve.py 支持 --port, 写死 8000 会让换端口时页面失效。
+    // 直接双击打开 html (file://) 时才回落到默认端口。
+    const apiBase = location.protocol === 'file:' ? 'http://127.0.0.1:8000' : location.origin;
+    const resp = await fetch(apiBase + '/detect', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({text})
     });
-    if(!resp.ok) throw new Error('API 未启动');
-    const data = await resp.json();
+    const data = await resp.json().catch(() => ({}));
+    // 400 多半是输入被服务端拒绝(代码/重复/过长), 不是"服务没启动"。
+    // 早先这里一律弹"先启动服务", 把真实的拒绝原因藏起来了。
+    if(!resp.ok){
+      document.getElementById('loading').style.display='none';
+      if(data.error){ showRejected(data); return; }
+      throw new Error('HTTP ' + resp.status);
+    }
     // 后端对非自然语言/重复内容不打分, 而是回 error。
     // 以前这里直接 show(ai_probability) —— 那些文本会被显示成
     // "0.0% 大概率是人类写的", 是个彻头彻尾的错误结论。

@@ -151,3 +151,27 @@ class TestRadioChoicesMatchDispatch:
                 continue        # 需要外部服务
             out = app_gradio.humanize_fn(text, choice)
             assert out != text, f"选项「{choice}」静默返回了原文"
+
+# ---------------------------------------------------------------- 网页 Demo
+class TestDemoHtml:
+    """demo.html 的常见回归: 端口写死、错误路径说谎、没有快捷键"""
+
+    @staticmethod
+    def _html():
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return open(os.path.join(root, "demo.html"), encoding="utf-8").read()
+
+    def test_api_follows_page_origin(self):
+        """serve.py 支持 --port 之后, 写死 8000 会让换端口的页面全部失效"""
+        h = self._html()
+        assert "location.origin" in h
+        assert "http://127.0.0.1:8000/detect" not in h
+
+    def test_http_error_does_not_pretend_service_is_down(self):
+        """400 是输入被拒绝, 不是服务没启动 —— 以前一律弹"先启动服务""" 
+        h = self._html()
+        assert "if(!resp.ok)" in h
+        assert "showRejected(data)" in h
+
+    def test_ctrl_enter_shortcut(self):
+        assert "e.key === 'Enter'" in self._html()
