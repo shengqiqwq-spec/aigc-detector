@@ -25,7 +25,7 @@ metrics:
 
 | 档位 | 模型 | 体积 | 整体 F1 | 短文本 | 中文本 | 长文本 | 运行时依赖 |
 |---|---|---|---|---|---|---|---|
-| **tier1** ⭐ | char TF-IDF + LR | 2.6MB | **0.9814** | 0.9626 | 0.9775 | 0.9896 | numpy |
+| **tier1** ⭐ | char TF-IDF + LR (v12) | 2.6MB | **0.9823** | 0.9591 | 0.9797 | 0.9906 | numpy |
 | en | char_wb+word TF-IDF + LR | 2.8MB | **0.9905** | 0.9513 | 0.9939 | 0.9894 | numpy |
 | tier3 | CharTextCNN | 1.9MB | 0.9709 | — | — | — | torch |
 | tier0 | Hashing + NB | 421KB | **0.9144** | — | — | — | numpy |

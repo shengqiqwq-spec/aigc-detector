@@ -10,7 +10,7 @@ Model matrix scales from phones to desktops, and the runtime needs nothing but n
 ## ✨ Highlights
 
 - **4 model tiers**: 357KB (mobile) → 2.8MB (universal), auto-selected by hardware
-- **Chinese detection F1 = 0.9812** (leak-free grouped split; 1.17% false-positive rate; F1 1.0000 on long text)
+- **Chinese detection F1 = 0.982 (v12)** (leak-free grouped split; 0.00% HC3 false-positive rate; v12 adds 340 clean out-of-topic short samples, strict 3-fold out-of-topic short recall 54.7%→72.3%, see `ckpt/detector_zh_final/report.json`)
 - **Bilingual**: auto-detects language and switches models automatically
 - **numpy only**: every tier ships a pure-numpy inference path, no sklearn needed
 - **100% local**: no network, no API cost, no data upload
@@ -60,7 +60,7 @@ Windows users can double-click `启动Demo.bat`.
 
 | Tier | Model | Size | Overall F1 | Short | Long | Use Case |
 |---|---|---|---|---|---|---|
-| **zh_final (v11)** ⭐ | TF-IDF+LR | 2.6MB | **0.9812** | 0.9521 | 0.9904 | All machines (default) |
+| **zh_final (v12)** ⭐ | TF-IDF+LR | 2.6MB | **0.9823** | 0.9591 | 0.9906 | All machines (default) |
 | en_v5 | TF-IDF+LR dual | 2.8MB | **0.9905** | 0.9513 | 0.9894 | English |
 | tier3 | CharTextCNN | 1.9MB | **0.9709** | — | — | Needs torch, 0.5ms |
 | tier0 | Hashing+NB | 421KB | **0.9144** | — | — | Mobile (Chinese) |
