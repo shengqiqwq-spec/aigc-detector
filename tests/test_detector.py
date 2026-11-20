@@ -1117,3 +1117,15 @@ class TestLongTextChunking:
         for t in ["人工智能技术正在深刻改变各行各业。", "今天买菜碰到老同学。"]:
             p = fast.predict_proba(t)
             assert 0.0 <= p <= 1.0
+
+    def test_en_tier0_linear_format_loads(self):
+        """en_tier0 v2 用 char_wb 线性 fast_nb.npz, 纯numpy加载+推理"""
+        import os
+        from fast_nb import FastNB
+        d = os.path.join(M.BASE, "detector_en_tier0")
+        fast = FastNB(d)
+        assert getattr(fast, "linear", False), "en_tier0 应为线性 fast_nb 格式"
+        for t in ["Artificial intelligence is transforming education worldwide.",
+                  "I guess the movie was okay, nothing special really."]:
+            p = fast.predict_proba(t)
+            assert 0.0 <= p <= 1.0
