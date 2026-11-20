@@ -1068,3 +1068,31 @@ class TestLongTextChunking:
         monkeypatch.setitem(M._ALL_PREDICTORS, "tier0", fake)
         M.detect(self._long_text(), tier="tier0")
         assert len(calls) == 1, "轻量档没验过分段行为, 必须保持原样"
+
+    # ---- 输入校验回归: fuzz 发现的"假分数"bug ----
+    def test_non_string_input_rejected(self):
+        """list/dict/float 不该被 str() 转成假文本再打概率"""
+        for bad in ([1, 2], {"a": 1}, 3.14):
+            r = M.detect(bad)
+            assert r.get("error") == "invalid_input", (bad, r)
+            assert r["ai_probability"] == 0.0
+
+    def test_very_short_text_rejected(self):
+        """1-3 个有效字符没有可判断的写作风格, 不该给假分数"""
+        for t in ("a", "你好", "abc"):
+            r = M.detect(t)
+            assert r.get("error") == "text_too_short", (t, r)
+            assert r["ai_probability"] == 0.0
+
+    def test_json_array_rejected(self):
+        """纯 JSON 数组没有 key:value, 旧规则漏过, 必须拒绝"""
+        for t in ('[1, 2, 3]', '["a", "b"]', '[true, false, null]'):
+            r = M.detect(t)
+            assert r.get("error") == "not_natural_language", (t, r)
+            assert r["ai_probability"] == 0.0
+
+    def test_normal_short_text_still_scored(self):
+        """正常短文本(>=4有效字符)仍要照常给分, 不能被极短拒绝误伤"""
+        r = M.detect("今天天气很好")
+        assert r.get("error") in (None, "-"), r
+        assert r["ai_probability"] > 0

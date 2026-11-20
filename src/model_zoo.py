@@ -346,6 +346,16 @@ def _reject_reason(t):
     # JSON 对象/数组: 以 { 或 [ 开头, 且有 key: value 结构
     if _re.match(r"^\s*[\{\[]", sample) and _re.search(r'["\']?\w+["\']?\s*:', sample):
         return "JSON"
+    _s = sample.strip()
+    if _s.startswith("[") and _s.endswith("]"):
+        _inner = _s[1:-1]
+        # 数组字面量: 引号字符串/数字/bool/null 用逗号分隔, 不含中文句号等
+        # 自然语言标点。允许字母(字符串内容), 但排除中文和句末标点。
+        _bad = set(chr(0x4e00) + "。！？；，、")  # CJK 起点粗略判断见下
+        _has_cjk = any(chr(0x4e00) <= c <= chr(0x9fff) for c in _inner)
+        _has_sentence_punct = any(c in "。！？；" for c in _inner)
+        if not _has_cjk and not _has_sentence_punct and len(_inner) < 500:
+            return "JSON数组"
     # HTML/XML 标签
     if len(_re.findall(r"<[a-zA-Z/][^>]{0,40}>", sample)) >= 2:
         return "HTML"
@@ -463,7 +473,10 @@ def detect(text, tier="auto"):
     if text is None:
         text = ""
     if not isinstance(text, str):
-        text = str(text)
+        return {"language":"unknown","tier":tier,"ai_probability":0.0,
+                "bucket":"低","confidence":"输入不是文本",
+                "text_len":0,"latency_ms":0.0,
+                "profile":"skipped","error":"invalid_input"}
 
     # 超长输入保护必须放在最前面。
     # 放在后面时, 100 万字的文本会先在逐字符扫描(_meaningful)和
@@ -494,6 +507,11 @@ def detect(text, tier="auto"):
                 "bucket": "低", "confidence": f"不是自然语言文本({_reject})",
                 "text_len": len(text), "latency_ms": 0.0,
                 "profile": "skipped", "error": "not_natural_language"}
+    if 0 < meaningful < 4:
+        return {"language":"unknown","tier":tier,"ai_probability":0.0,
+                "bucket":"低","confidence":"文本过短(<4有效字符)",
+                "text_len":len(text),"latency_ms":0.0,
+                "profile":"skipped","error":"text_too_short"}
 
     # 重复文本拒绝: "这是一段测试文本。" * 500 会被判成高 AI, 但那不是写作风格。
     # 必须同时看内容多样性: 一篇文章把 5 个段落复制两遍, ratio 也接近 1,
