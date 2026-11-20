@@ -29,7 +29,7 @@ metrics:
 | en | char_wb+word TF-IDF + LR | 2.8MB | **0.9905** | 0.9513 | 0.9939 | 0.9894 | numpy |
 | tier3 | CharTextCNN | 1.9MB | 0.9709 | — | — | — | torch |
 | tier0 | Hashing + SGD(log_loss) | ~260KB | **0.9579** | — | — | — | numpy |
-| en_tier0 | Hashing + NB | 357KB | **0.9408** | — | — | — | numpy |
+| en_tier0 | Hashing + SGD(log_loss) | ~260KB | **0.9616** | — | — | — | numpy |
 
 **运行时依赖是 numpy，不是 sklearn。** 每个模型目录都带 `fast.npz` /
 `fast_nb.npz`（纯数组格式），加载时不 import sklearn。没有这两个文件时

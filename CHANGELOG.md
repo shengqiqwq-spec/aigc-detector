@@ -1,3 +1,10 @@
+## v0.4.4 (2026-11-21)
+- 英文轻量档 en_tier0 升级：char_wb(2,4)+MultinomialNB → char_wb(2,5)+SGD(log_loss)
+  - 留出集 F1 0.9408 → 0.9616（3 个随机种子一致领先，+1.9~3.1 点）
+  - 线性 fast_nb.npz（char_wb 配置），与中文 tier0 v2 同一纯 numpy 快路径
+  - 体积 357KB → ~260KB；热路径 0.310ms → 0.304ms（基本持平）
+  - 更新训练脚本 + 格式 smoke test；173 项测试通过
+
 ## v0.4.3 (2026-11-21)
 - 中文轻量档 tier0 升级：Hashing(2,5)+MultinomialNB → Hashing(2,5)+SGD(log_loss)
   - 留出集 F1 0.907 → 0.958（3 个随机种子一致领先，+5~6 点）

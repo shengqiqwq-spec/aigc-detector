@@ -64,7 +64,7 @@ Windows users can double-click `启动Demo.bat`.
 | en_v5 | TF-IDF+LR dual | 2.8MB | **0.9905** | 0.9513 | 0.9894 | English |
 | tier3 | CharTextCNN | 1.9MB | **0.9709** | — | — | Needs torch, 0.5ms |
 | tier0 | Hashing+SGD | ~260KB | **0.9579** | — | — | Mobile (Chinese, v2) |
-| en_tier0 | Hashing+NB | 357KB | **0.9408** | — | — | Mobile (English) |
+| en_tier0 | Hashing+SGD | ~260KB | **0.9616** | — | — | Mobile (English, v2) |
 
 **Measured head to head** (30 real AI samples + 30 human samples, 100-500 chars):
 
