@@ -394,6 +394,12 @@ def _reject_reason(t):
         return "编码数据(base64等)"
     # 非中英文字符占主导: 模型没为这些语言训练过, 给了分也是瞎猜
     _letters = _re.findall(r"[A-Za-z\u4e00-\u9fff]", sample)
+    # 日文假名: 模型只在中文(汉字)+英文上训练过, 给日文打概率是假分数。
+    # 用假名(3040-30FF)精确识别, 不影响繁体中文(繁体用汉字, 无假名)。
+    _kana = [c for c in sample if 0x3040 <= ord(c) <= 0x30ff]
+    _han = [c for c in sample if 0x4e00 <= ord(c) <= 0x9fff]
+    if len(_kana) >= 3 and len(_kana) >= len(_han):
+        return "日文(未训练的语言)"
     _other_alpha = _re.findall(r"[^\W\d_A-Za-z\u4e00-\u9fff]", sample)
     if len(_other_alpha) > 10 and len(_other_alpha) > len(_letters):
         return "非中英文本(未训练的语言)"

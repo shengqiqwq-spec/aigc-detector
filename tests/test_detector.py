@@ -1096,3 +1096,12 @@ class TestLongTextChunking:
         r = M.detect("今天天气很好")
         assert r.get("error") in (None, "-"), r
         assert r["ai_probability"] > 0
+
+    def test_japanese_rejected_but_traditional_chinese_ok(self):
+        """日文假名该拒绝(未训练), 但繁体中文(纯汉字)必须照常给分"""
+        jp = M.detect("これは日本語のテスト文章です。")
+        assert jp.get("error") == "not_natural_language", jp
+        assert jp["ai_probability"] == 0.0
+        zh = M.detect("這是一段繁體中文的測試文字內容。")
+        assert zh.get("error") in (None, "-"), zh
+        assert zh["ai_probability"] > 0

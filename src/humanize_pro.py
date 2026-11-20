@@ -48,7 +48,12 @@ def rewrite(text, strong=False):
     req = urllib.request.Request(API, data=data, headers={"Content-Type":"application/json"})
     with urllib.request.urlopen(req, timeout=600) as r:
         out = json.loads(r.read())["choices"][0]["message"]["content"].strip()
-    return out.split("改写：")[-1].split("---")[-1].strip()
+    result = out.split("改写：")[-1].split("---")[-1].strip()
+    if not result:
+        # 后端返回了空 content(半死不活的 server 常见), 直接返回空串会让
+        # UI 显示一片空白且没有任何提示。抛异常让上层给出可读错误。
+        raise RuntimeError("LLM 后端返回空结果(模型可能未就绪或响应异常)")
+    return result
 
 def find_backend():
     """探测可用的 LLM 后端, 返回 (base_url, name) 或 None"""
