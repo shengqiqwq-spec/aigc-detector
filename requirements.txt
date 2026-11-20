@@ -1,5 +1,5 @@
 # ---- 核心运行 ----
-# 只要 numpy 就能跑: 四个档位都自带 fast.npz / fast_nb.npz 快路径,
+# 只要 numpy 就能跑: 四个线性档位(tier1/en/tier0/en_tier0)自带 fast.npz / fast_nb.npz 快路径,
 # 加载不走 sklearn。冷启动 ~500ms, 热路径 0.02~0.11ms。
 numpy>=1.24
 

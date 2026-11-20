@@ -1,3 +1,10 @@
+## v0.4.5 (2026-11-21)
+- 文档诚实性修复：README "四个档位都带纯 numpy 推理路径" 与 FAQ "只有 tier3 需要 torch" 矛盾
+  - 核心亮点/快速开始/requirements 统一改为：tier1 / en / tier0 / en_tier0 四个线性档纯 numpy，
+    tier3（CNN）可选且需要 torch；模型矩阵 tier3 行加注
+  - 用纯 numpy 隔离环境实测确认：前四档正常，tier3 给出友好 RuntimeError 提示
+  - 无模型/代码改动，173 项测试仍通过
+
 ## v0.4.4 (2026-11-21)
 - 英文轻量档 en_tier0 升级：char_wb(2,4)+MultinomialNB → char_wb(2,5)+SGD(log_loss)
   - 留出集 F1 0.9408 → 0.9616（3 个随机种子一致领先，+1.9~3.1 点）

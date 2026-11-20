@@ -12,7 +12,7 @@ Model matrix scales from phones to desktops, and the runtime needs nothing but n
 - **4 model tiers**: 357KB (mobile) → 2.8MB (universal), auto-selected by hardware
 - **Chinese detection F1 = 0.982 (v12)** (leak-free grouped split; 0.00% HC3 false-positive rate; v12 adds 340 clean out-of-topic short samples, strict 3-fold out-of-topic short recall 54.7%→72.3%, see `ckpt/detector_zh_final/report.json`)
 - **Bilingual**: auto-detects language and switches models automatically
-- **numpy only**: every tier ships a pure-numpy inference path, no sklearn needed
+- **numpy only**: the four linear tiers (tier1 / en / tier0 / en_tier0) ship pure-numpy inference paths, no sklearn needed; tier3 (CNN) is optional and requires torch
 - **100% local**: no network, no API cost, no data upload
 - **Zero-hallucination rewriting**: rule-based, never alters facts or numbers (but it barely moves the AI score — see below)
 
