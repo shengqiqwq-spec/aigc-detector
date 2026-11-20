@@ -1,9 +1,10 @@
 {
-  "f1": 0.9144,
-  "alpha": 0.1,
-  "model": "Hashing+MultinomialNB",
+  "f1": 0.9579,
+  "model": "Hashing+SGD(log_loss)",
   "features": 65536,
-  "train_n": 32702,
-  "test_n": 8251,
-  "ai_new": 2941
+  "ngram": "char(2,5)",
+  "train_n": 34316,
+  "test_n": 8579,
+  "fmt": "linear_npz",
+  "ai_new": 4883
 }

@@ -1105,3 +1105,15 @@ class TestLongTextChunking:
         zh = M.detect("這是一段繁體中文的測試文字內容。")
         assert zh.get("error") in (None, "-"), zh
         assert zh["ai_probability"] > 0
+
+    def test_tier0_linear_format_loads(self):
+        """tier0 v2 用线性 fast_nb.npz(coef/intercept), 必须能被纯numpy路径加载"""
+        import os
+        from fast_nb import FastNB
+        d = os.path.join(M.BASE, "detector_tier0")
+        fast = FastNB(d)
+        assert getattr(fast, "linear", False), "tier0 应为线性 fast_nb 格式"
+        assert fast.coef.shape[0] == fast.n_features
+        for t in ["人工智能技术正在深刻改变各行各业。", "今天买菜碰到老同学。"]:
+            p = fast.predict_proba(t)
+            assert 0.0 <= p <= 1.0

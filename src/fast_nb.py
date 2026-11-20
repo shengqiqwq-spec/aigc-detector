@@ -101,6 +101,14 @@ class FastNB:
         self.n_features = int(cfg[4])
         self.seed = int(cfg[5])
         self.norm = "l2" if int(cfg[6]) else None
+        # 线性格式(kind=1): coef/intercept 代替 NB 的 log 概率表。
+        # 与 sklearn SGDClassifier(loss='log_loss') 数值一致(见 parity 测试)。
+        if "kind" in z.files and int(z["kind"][0]) == 1:
+            self.linear = True
+            self.coef = z["coef"].astype(np.float64)
+            self.intercept = float(z["intercept"])
+            return
+        self.linear = False
         self.class_log_prior = z["class_log_prior"].astype(np.float64)
         self.feature_log_prob = z["feature_log_prob"].astype(np.float64)
 
@@ -128,6 +136,7 @@ class FastNB:
         self.n_features = int(vec.n_features)
         self.seed = int(getattr(vec, "seed", 0) or 0)
         self.norm = getattr(vec, "norm", "l2")
+        self.linear = False
         self.class_log_prior = np.asarray(clf.class_log_prior_, dtype=np.float64)
         self.feature_log_prob = np.asarray(clf.feature_log_prob_, dtype=np.float64)
 
@@ -188,6 +197,10 @@ class FastNB:
         稀疏 X 只对非零项求和 (X 是 L2 归一的 tf 权重), 零特征不参与。
         """
         idx, vals = self.transform(text)
+        if getattr(self, "linear", False):
+            if idx is None:
+                return float(self.intercept)
+            return float(np.dot(vals, self.coef[idx]) + self.intercept)
         lp = self.class_log_prior
         flp = self.feature_log_prob
         if idx is None:
