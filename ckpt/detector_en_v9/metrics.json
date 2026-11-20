@@ -1,0 +1,40 @@
+{
+  "lang": "en",
+  "kind": "dual",
+  "C": 30.0,
+  "vec_cfg": {
+    "analyzer": "char_wb",
+    "ngram_range": [
+      2,
+      5
+    ],
+    "min_df": 2,
+    "max_features": 400000,
+    "sublinear_tf": true
+  },
+  "vec_cfg2": {
+    "analyzer": "word",
+    "ngram_range": [
+      1,
+      2
+    ],
+    "min_df": 2,
+    "max_features": 300000,
+    "sublinear_tf": true
+  },
+  "n_train": 66605,
+  "n_features": 516770,
+  "test": {
+    "f1": 0.99251,
+    "fpr": 0.00405,
+    "recall": 0.99329,
+    "auc": 0.99983
+  },
+  "ind": {
+    "f1": 0.98949,
+    "fpr": 0.00451,
+    "recall": 0.98839,
+    "auc": 0.99979
+  },
+  "trained_at": "2026-11-20 12:50:36"
+}

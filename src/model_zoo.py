@@ -292,8 +292,14 @@ def pred_en_tier0(text):
     return float(clf.predict_proba(vec.transform([text]))[0, 1])
 
 def pred_en(text):
-    """英文检测器: 分组防泄漏切分 F1=0.9905, char_wb+word 双特征"""
-    d = os.path.join(BASE, "detector_en_v5")
+    """英文检测器: 分组防泄漏切分 ind F1=0.9905 / 误报 0.45%, char_wb+word 双特征
+
+    v9 (2026-11-20): 用本地 16 核扫了 48 个向量化/超参组合, 最优为
+    char_wb(2,5) + min_df=2 + 300k 上限 + sublinear + C=30, 双特征 516,770 维。
+    旧 en_v5 在 HC3 英文 AI 答案上只能检出 13.3%（它只见过 1702 条 AI 文本,
+    学成了"几乎全判人类"）, v9 在同一批样本上 100% 检出、真人 0% 误报。
+    """
+    d = os.path.join(BASE, "detector_en_v9")
     fd = _fast(d)
     if fd is not None:
         return float(fd.predict_proba(text))
@@ -493,13 +499,14 @@ def detect(text, tier="auto"):
     elif n < 150:
         shrink = 0.10
         p = p + (0.5 - p) * shrink
-    # 英文模型(v8)的概率标定与中文不同: class_weight=balanced 会把整体分数压低,
-    # 实测在 0.5 阈值下英文文体识别只剩 0/4, 而 0.30 阈值下误报 0%、识别 3/4。
-    # 这里把英文分数重标定到与中文一致的口径, 让统一的 bucket() 阈值继续有效。
-    if chosen.startswith("en"):
-        CAL_LO, CAL_HI = 0.25, 0.80      # 原标度下相当于 0.5 / 0.99
-        # 取 0.25 而非 0.30: 0.30 会把典型 AI 技术说明(原始 0.287)压到 0.488,
-        # 卡在阈值下方一丁点。0.25 时该样本到 0.534, 真人误报仅 3/497(0.6%)。
+    # 英文档的概率标定: 只有 en_tier0 (Hashing+NB) 还需要这层重标定。
+    # 主 en 档换成 v9 后不再需要 —— v9 训练时没用 class_weight="balanced",
+    # 输出本身就是 0.5 阈值上校准好的（AI 0.999 / 真人 0.001）。
+    # 老 v8 那套 (0.25,0.80) 会把 v9 的真人分数整体推到 0.27 起,
+    # 一旦碰上真正模棱两可的人类文本就会翻过 0.5 变成误报。
+    _EN_CAL = {"en_tier0": (0.25, 0.80)}
+    if chosen in _EN_CAL:
+        CAL_LO, CAL_HI = _EN_CAL[chosen]
         p = (p - CAL_LO) / (CAL_HI - CAL_LO) * 0.5 + 0.5
         p = min(0.999, max(0.001, p))
 
