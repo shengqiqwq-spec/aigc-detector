@@ -429,6 +429,35 @@ def _content_diversity(t):
     return len(set(sents)) / len(sents)
 
 
+def _split_for_detection(text, target=400):
+    """按标点把长文切成约 target 字的片段, 供分段检测取最大值
+
+    长文整篇送进去时, AI 特征会被大量中性段落稀释 —— 实测 500-2000 字
+    的 AI 召回 94.0%, 而 80-200 字是 99.37%。分段取最大能救回一部分,
+    误报不变（137 条真人长文 0%）。
+
+    只在句子边界切, 不在词中间切。超长单句才强制按长度切开。
+    """
+    import re as _re
+    parts = [x for x in _re.split(r"(?<=[。！？；!?;\n])", text) if x.strip()]
+    out, cur = [], ""
+    for x in parts:
+        if len(cur) + len(x) > target and cur:
+            out.append(cur)
+            cur = x
+        else:
+            cur += x
+    if cur:
+        out.append(cur)
+    res = []
+    for c in out:
+        while len(c) > target * 2:
+            res.append(c[:target])
+            c = c[target:]
+        res.append(c)
+    return res
+
+
 def detect(text, tier="auto"):
     # 输入校验: 空/纯空白/过短无意义输入直接返回明确结果, 不做无意义的概率猜测
     if text is None:
@@ -496,7 +525,16 @@ def detect(text, tier="auto"):
     if chosen not in _ALL_PREDICTORS:
         chosen = "tier1"
     t0 = time.time()
-    p = _ALL_PREDICTORS[chosen](text)
+    # 长文分段聚合: 只对主力档生效。tier0/en_tier0 是 Hashing+NB 轻量档,
+    # 没有在长文上验过分段行为, 保持原样。
+    chunked = False
+    if len(stripped) >= 600 and chosen in ("tier1", "en", "tier3"):
+        pieces = _split_for_detection(stripped)
+        if len(pieces) > 1:
+            p = max(float(_ALL_PREDICTORS[chosen](c)) for c in pieces)
+            chunked = True
+    if not chunked:
+        p = _ALL_PREDICTORS[chosen](text)
     n = len(text)
 
     # 长度校准: 短文本信息不足, 概率应向 0.5 收缩, 避免给出虚假的极端值

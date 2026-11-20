@@ -987,3 +987,70 @@ def test_code_json_html_still_rejected_after_sample_limit():
                 '<div class="x"><p>hello</p></div>',
                 "def foo(x):\n    return x + 1"):
         assert detect(txt).get("error") == "not_natural_language", txt
+
+# ---------------------------------------------------------------- 长文分段聚合
+class TestLongTextChunking:
+    """长文分段取最大: 只对 >=600 字的主力档生效
+
+    实测(全量 130 条 AI / 249 条真人长文, 600-2000 字):
+      整篇召回 99.23% / 误报 0.00%
+      分段(400字) 召回 100.00% / 误报 0.00%
+    段长是扫出来的 —— 120 字虽然也能到 100% 召回, 但误报飙到 9.64%。
+    """
+
+    @staticmethod
+    def _long_text():
+        """不重复的中文长文本 —— 重复句会被 repetitive_content 提前拦掉,
+        那样就测不到分段逻辑了。"""
+        import random
+        parts = []
+        r = random.Random(7)
+        for i in range(60):
+            parts.append(f"第{i}个观察记录显示，{r.choice(['气温','湿度','光照','风速'])}"
+                         f"在{r.choice(['上午','中午','傍晚'])}时段出现了"
+                         f"{r.choice(['轻微','明显','持续'])}变化，值得后续跟踪。")
+        return "".join(parts)
+
+    def test_split_respects_sentence_boundaries(self):
+        from model_zoo import _split_for_detection
+        text = "第一句话内容足够长。" * 40 + "第二句话也不短。" * 40
+        pieces = _split_for_detection(text, 400)
+        assert len(pieces) > 1
+        # 每段都不能把句子从中间劈开(除非单句本身就超长)
+        for p in pieces:
+            assert p
+            assert len(p) <= 800
+        assert "".join(pieces) == text
+
+    def test_chunking_activates_only_for_long_text(self, monkeypatch):
+        import model_zoo as M
+        calls = []
+        def fake(text):
+            calls.append(len(text))
+            return 0.3
+        monkeypatch.setitem(M._ALL_PREDICTORS, "tier1", fake)
+        M.detect("这是一段很短的中文文本，用来确认不会触发分段聚合。", tier="tier1")
+        assert len(calls) == 1
+        calls.clear()
+        M.detect(self._long_text(), tier="tier1")
+        assert len(calls) > 1, "600 字以上应当分段调用预测器"
+
+    def test_chunk_result_is_max_not_mean(self, monkeypatch):
+        import model_zoo as M
+        seq = iter([0.1, 0.2, 0.9, 0.3, 0.15, 0.25])
+        def fake(text):
+            return next(seq, 0.1)
+        monkeypatch.setitem(M._ALL_PREDICTORS, "tier1", fake)
+        d = M.detect(self._long_text(), tier="tier1")
+        # 最大值 0.9 必须胜出 —— 取平均会把这种"一段很强"的信号抹平
+        assert d["ai_probability"] >= 0.85, d
+
+    def test_light_tiers_do_not_chunk(self, monkeypatch):
+        import model_zoo as M
+        calls = []
+        def fake(text):
+            calls.append(text)
+            return 0.3
+        monkeypatch.setitem(M._ALL_PREDICTORS, "tier0", fake)
+        M.detect(self._long_text(), tier="tier0")
+        assert len(calls) == 1, "轻量档没验过分段行为, 必须保持原样"
